@@ -53,7 +53,7 @@ test('growing rows needs no confirmation', async () => {
 
 test('per-row height edits one row', async () => {
   const { user } = await setup();
-  const field = screen.getByLabelText('Tingkat 1');
+  const field = screen.getByLabelText('Tinggi tingkat 1');
   await user.clear(field);
   await user.type(field, '40{Enter}');
   await waitFor(() => expect(useDataStore.getState().shelves[0].rowHeightsCm).toEqual([40, 33, 33, 33, 33]));
@@ -68,4 +68,50 @@ test('delete shelf confirms and returns books', async () => {
   await waitFor(() => expect(useDataStore.getState().shelves).toHaveLength(0));
   expect(useDataStore.getState().books).toHaveLength(2);
   expect(useUiStore.getState().selectedShelfId).toBeNull();
+});
+
+const cols = (row: number) => useDataStore.getState().shelves[0].colWidthsCm[row];
+
+async function typeInto(user: ReturnType<typeof userEvent.setup>, label: string, value: string) {
+  const field = screen.getByLabelText(label);
+  await user.clear(field);
+  await user.type(field, `${value}{Enter}`);
+}
+
+test('column count of one row splits that row only', async () => {
+  const { user } = await setup();
+  await typeInto(user, 'Jumlah kolom tingkat 2', '2');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  await waitFor(() => expect(cols(1)).toEqual([37, 37]));
+  expect(cols(0)).toEqual([76]);
+});
+
+test('fewer columns in a row with books asks first', async () => {
+  const { user, id } = await setup();
+  await typeInto(user, 'Jumlah kolom tingkat 2', '2');
+  await waitFor(() => expect(cols(1)).toHaveLength(2));
+  const [book] = await useDataStore.getState().addSeries({ series: 'Y', type: 'komik', from: 1, to: 1 });
+  await useDataStore.getState().placeBooks([book.id], { shelfId: id, row: 1, col: 1 });
+  await typeInto(user, 'Jumlah kolom tingkat 2', '1');
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('1 buku akan dikembalikan ke Belum ditata');
+  await user.click(within(dialog).getByRole('button', { name: 'Kurangi' }));
+  await waitFor(() => expect(cols(1)).toHaveLength(1));
+  expect(useDataStore.getState().books.find((b) => b.id === book.id)!.placement).toBeNull();
+});
+
+test('column width edits adjust the last column automatically', async () => {
+  const { user } = await setup();
+  await typeInto(user, 'Jumlah kolom tingkat 1', '2');
+  await waitFor(() => expect(cols(0)).toHaveLength(2));
+  await typeInto(user, 'Tingkat 1 kolom 1', '50');
+  await waitFor(() => expect(cols(0)).toEqual([50, 24]));
+  expect(screen.getByText('Kolom 2: 24 cm (otomatis)')).toBeInTheDocument();
+});
+
+test('shelf width sets the inner width', async () => {
+  const { user } = await setup();
+  await typeInto(user, 'Lebar rak', '100');
+  await waitFor(() => expect(useDataStore.getState().shelves[0].innerWidthCm).toBe(96));
+  expect(cols(2)).toEqual([96]);
 });
