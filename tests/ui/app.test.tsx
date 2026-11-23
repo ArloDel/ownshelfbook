@@ -22,3 +22,25 @@ test('tabs switch between room and collection', async () => {
   await user.click(screen.getByRole('tab', { name: 'Koleksi' }));
   expect(screen.getByRole('heading', { name: /Koleksi/ })).toBeInTheDocument();
 });
+
+test('store errors are shown and can be dismissed', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  useDataStore.setState({ error: 'Perubahan gagal disimpan' });
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('Perubahan gagal disimpan');
+  await user.click(alert);
+  expect(useDataStore.getState().error).toBeNull();
+});
+
+test('load failure shows the error instead of loading forever', async () => {
+  const hydrate = useDataStore.getState().hydrate;
+  useDataStore.setState({ loaded: false, error: 'Gagal memuat data', hydrate: async () => {} });
+  try {
+    render(<App />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Gagal memuat data');
+    expect(screen.queryByText('Memuat…')).not.toBeInTheDocument();
+  } finally {
+    useDataStore.setState({ hydrate });
+  }
+});
