@@ -84,3 +84,12 @@ test.each([
 ])('snapRotation(%s) = %s', (i, o) => {
   expect(snapRotation(i)).toBe(o);
 });
+
+import { overlappingIds } from '../../src/domain/shelves';
+
+test('overlappingIds lists every shelf that overlaps another', () => {
+  const a = createShelf('rak-buku', 'A', { x: 0, z: 0 });
+  const b = createShelf('rak-buku', 'B', { x: 50, z: 0 });
+  const c = createShelf('rak-buku', 'C', { x: 300, z: 0 });
+  expect([...overlappingIds([a, b, c])].sort()).toEqual([a.id, b.id].sort());
+});
