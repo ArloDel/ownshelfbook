@@ -555,3 +555,25 @@ input[type='color'] {
 .toast.error {
   background: var(--danger);
 }
+
+.tier {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem 0.6rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.tier legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+.auto-col {
+  margin: 0;
+  align-self: end;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-bottom: 0.45rem;
+}
