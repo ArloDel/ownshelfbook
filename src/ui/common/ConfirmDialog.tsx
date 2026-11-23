@@ -11,18 +11,18 @@ interface Props {
 }
 
 export function ConfirmDialog({ open, title, message, confirmLabel, danger, onConfirm, onCancel }: Props) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (open) cancelRef.current?.focus();
+    if (open) boxRef.current?.focus();
   }, [open]);
   if (!open) return null;
   return (
     <div className="backdrop" onKeyDown={(e) => e.key === 'Escape' && onCancel()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="dialog">
+      <div ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="dialog">
         <h2 id="confirm-title">{title}</h2>
         <p>{message}</p>
         <div className="row end">
-          <button ref={cancelRef} onClick={onCancel}>
+          <button onClick={onCancel}>
             Batal
           </button>
           <button className={danger ? 'danger' : 'primary'} onClick={onConfirm}>
