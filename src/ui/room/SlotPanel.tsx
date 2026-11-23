@@ -12,7 +12,7 @@ export function SlotPanel() {
   const shelf = useDataStore((s) => s.shelves.find((x) => x.id === slot?.shelfId));
   const { placeBooks, unplaceBooks, moveInSlot } = useDataStore.getState();
 
-  const valid = slot && shelf && slot.row < shelf.rowHeightsCm.length && slot.col < shelf.colWidthsCm.length;
+  const valid = slot && shelf && slot.row < shelf.rowHeightsCm.length && slot.col < shelf.colWidthsCm[slot.row].length;
   if (!valid) {
     return (
       <div className="panel-empty">
