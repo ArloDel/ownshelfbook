@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
 import { useUiStore, type Mode } from '../../store/uiStore';
 import { Scene } from '../scene/Scene';
 import { AddShelfMenu } from './AddShelfMenu';
 import { RoomSettings } from './RoomSettings';
 import { ShelfPanel } from './ShelfPanel';
+import { SlotPanel } from './SlotPanel';
+import { UnplacedList } from './UnplacedList';
 
 const MODES: { mode: Mode; label: string; hint: string }[] = [
   { mode: 'tata', label: 'Tata', hint: 'Atur letak dan bentuk rak' },
@@ -15,12 +16,14 @@ const HINTS: Record<Mode, string> = {
   isi: 'Klik slot rak, lalu taruh buku dari daftar Belum ditata.',
 };
 
-export function RoomPage({ left, fillPanel }: { left?: ReactNode; fillPanel?: ReactNode }) {
+export function RoomPage() {
   const mode = useUiStore((s) => s.mode);
   const setMode = useUiStore((s) => s.setMode);
   return (
     <div className="room">
-      <aside className="room-left">{left}</aside>
+      <aside className="room-left">
+        <UnplacedList />
+      </aside>
       <section className="room-center">
         <div className="room-toolbar">
           <div className="segmented" role="radiogroup" aria-label="Mode">
@@ -45,7 +48,7 @@ export function RoomPage({ left, fillPanel }: { left?: ReactNode; fillPanel?: Re
           <Scene />
         </div>
       </section>
-      <aside className="room-right">{mode === 'tata' ? <ShelfPanel /> : fillPanel}</aside>
+      <aside className="room-right">{mode === 'tata' ? <ShelfPanel /> : <SlotPanel />}</aside>
     </div>
   );
 }
