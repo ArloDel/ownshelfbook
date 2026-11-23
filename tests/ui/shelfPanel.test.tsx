@@ -29,7 +29,7 @@ test('shrinking rows with books asks first; cancel keeps rows', async () => {
   expect(dialog).toHaveTextContent('2 buku akan dikembalikan ke Belum ditata');
   await user.click(within(dialog).getByRole('button', { name: 'Batal' }));
   expect(rows()).toBe(5);
-  expect(screen.getByLabelText('Jumlah tingkat')).toHaveValue(5);
+  expect(screen.getByLabelText('Jumlah tingkat')).toHaveValue('5');
 });
 
 test('confirming the shrink applies it and unplaces the books', async () => {
