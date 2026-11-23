@@ -17,13 +17,23 @@ export function App() {
   const hydrate = useDataStore((s) => s.hydrate);
   const page = useUiStore((s) => s.page);
   const setPage = useUiStore((s) => s.setPage);
+  const error = useDataStore((s) => s.error);
+  const clearError = useDataStore((s) => s.clearError);
 
   useEffect(() => {
     if (!useDataStore.getState().loaded) void hydrate();
     void requestPersistentStorage();
   }, [hydrate]);
 
-  if (!loaded) return <p className="loading">Memuat…</p>;
+  if (!loaded) {
+    return error ? (
+      <p role="alert" className="loading error">
+        {error}
+      </p>
+    ) : (
+      <p className="loading">Memuat…</p>
+    );
+  }
 
   return (
     <div className="app">
@@ -48,6 +58,11 @@ export function App() {
         <BackupButtons />
       </header>
       <main className={`page page-${page}`}>{page === 'room' ? <RoomPage /> : <CollectionPage />}</main>
+      {error && (
+        <p role="alert" className="toast error" title="Klik untuk menutup" onClick={clearError}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
