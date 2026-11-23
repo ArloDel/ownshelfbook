@@ -7,6 +7,7 @@ import type { Shelf } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { BooksMesh } from './BooksMesh';
+import { CameraFocus } from './CameraFocus';
 import { RoomMesh } from './RoomMesh';
 import { ShelfMesh } from './ShelfMesh';
 import { SlotHits } from './SlotHits';
@@ -104,6 +105,7 @@ function SceneContent() {
         ))}
         <BooksMesh books={books} shelves={shown} highlightId={highlightId} />
       </group>
+      <CameraFocus />
       <OrbitControls makeDefault target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2 - 0.05} minDistance={0.3} maxDistance={15} />
     </>
   );
