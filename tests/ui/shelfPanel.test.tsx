@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDataStore } from '../../src/store/dataStore';
 import { useUiStore } from '../../src/store/uiStore';
@@ -38,7 +38,7 @@ test('confirming the shrink applies it and unplaces the books', async () => {
   await user.clear(field);
   await user.type(field, '4{Enter}');
   await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Kurangi' }));
-  expect(rows()).toBe(4);
+  await waitFor(() => expect(rows()).toBe(4));
   expect(useDataStore.getState().books.every((b) => b.placement === null)).toBe(true);
 });
 
@@ -48,7 +48,7 @@ test('growing rows needs no confirmation', async () => {
   await user.clear(field);
   await user.type(field, '6{Enter}');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  expect(rows()).toBe(6);
+  await waitFor(() => expect(rows()).toBe(6));
 });
 
 test('per-row height edits one row', async () => {
@@ -56,7 +56,7 @@ test('per-row height edits one row', async () => {
   const field = screen.getByLabelText('Tingkat 1');
   await user.clear(field);
   await user.type(field, '40{Enter}');
-  expect(useDataStore.getState().shelves[0].rowHeightsCm).toEqual([40, 33, 33, 33, 33]);
+  await waitFor(() => expect(useDataStore.getState().shelves[0].rowHeightsCm).toEqual([40, 33, 33, 33, 33]));
 });
 
 test('delete shelf confirms and returns books', async () => {
@@ -65,7 +65,7 @@ test('delete shelf confirms and returns books', async () => {
   const dialog = await screen.findByRole('dialog');
   expect(dialog).toHaveTextContent('2 buku akan dikembalikan ke Belum ditata');
   await user.click(within(dialog).getByRole('button', { name: 'Hapus' }));
-  expect(useDataStore.getState().shelves).toHaveLength(0);
+  await waitFor(() => expect(useDataStore.getState().shelves).toHaveLength(0));
   expect(useDataStore.getState().books).toHaveLength(2);
   expect(useUiStore.getState().selectedShelfId).toBeNull();
 });
