@@ -13,7 +13,6 @@ export function shelfBoards(s: Shelf): Board[] {
   const { width: W, height: H, depth: D } = shelfSize(s);
   const b = s.boardThicknessCm;
   const rows = s.rowHeightsCm.length;
-  const cols = s.colWidthsCm.length;
   const boards: Board[] = [
     { key: 'bottom', position: [0, b / 2, 0], size: [W, b, D] },
     { key: 'top', position: [0, H - b / 2, 0], size: [W, b, D] },
@@ -24,9 +23,11 @@ export function shelfBoards(s: Shelf): Board[] {
     const y = slotRect(s, r, 0).y - b / 2;
     boards.push({ key: `h${r}`, position: [0, y, 0], size: [W - 2 * b, b, D] });
   }
-  for (let c = 1; c < cols; c++) {
-    const x = slotRect(s, 0, c).x - b / 2;
-    boards.push({ key: `v${c}`, position: [x, H / 2, 0], size: [b, H - 2 * b, D] });
+  for (let r = 0; r < rows; r++) {
+    for (let c = 1; c < s.colWidthsCm[r].length; c++) {
+      const slot = slotRect(s, r, c);
+      boards.push({ key: `v${r}-${c}`, position: [slot.x - b / 2, slot.y + slot.height / 2, 0], size: [b, slot.height, D] });
+    }
   }
   if (SHELF_PRESETS[s.model].hasBackPanel) {
     boards.push({ key: 'back', position: [0, H / 2, -D / 2 + 0.3], size: [W, H, 0.6] });
