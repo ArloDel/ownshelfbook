@@ -9,7 +9,7 @@ import {
   slotUsage,
   unplaceBooks,
 } from '../../src/domain/placement';
-import { createShelf } from '../../src/domain/shelves';
+import { createShelf, setColumnCount, setRowCount } from '../../src/domain/shelves';
 import type { Book } from '../../src/domain/types';
 
 const komik = (n: number) => Array.from({ length: n }, (_, i) => createBook({ title: 'K', type: 'komik', volume: i + 1 }));
@@ -94,16 +94,33 @@ describe('books outside a shrunk shelf', () => {
     { ...elsewhere, placement: { shelfId: other.id, row: 3, col: 3, order: 0 } },
   ];
 
+  const rows3 = setRowCount(shelf, 3);
+  const rows3cols3 = [0, 1, 2].reduce((s, r) => setColumnCount(s, r, 3), rows3);
+
   test('countBooksOutside', () => {
-    expect(countBooksOutside(books, shelf.id, 3, 4)).toBe(1);
-    expect(countBooksOutside(books, shelf.id, 3, 3)).toBe(2);
+    expect(countBooksOutside(books, rows3)).toBe(1);
+    expect(countBooksOutside(books, rows3cols3)).toBe(2);
+    expect(countBooksOutside(books, { id: shelf.id, rowHeightsCm: [], colWidthsCm: [] })).toBe(2);
   });
 
   test('returnBooksOutside unplaces them without deleting', () => {
-    const r = returnBooksOutside(books, shelf.id, 3, 3);
+    const r = returnBooksOutside(books, rows3cols3);
     expect(r).toHaveLength(3);
     expect(r[0].placement).toBeNull();
     expect(r[1].placement).toBeNull();
     expect(r[2].placement).toEqual(books[2].placement);
   });
+});
+
+test('shrinking one row only unplaces books in that row removed columns', () => {
+  const s = createShelf('kubus', 'K');
+  const [a, b, c] = komik(3);
+  const books: Book[] = [
+    { ...a, placement: { shelfId: s.id, row: 1, col: 3, order: 0 } },
+    { ...b, placement: { shelfId: s.id, row: 1, col: 0, order: 0 } },
+    { ...c, placement: { shelfId: s.id, row: 2, col: 3, order: 0 } },
+  ];
+  const next = setColumnCount(s, 1, 2);
+  expect(countBooksOutside(books, next)).toBe(1);
+  expect(returnBooksOutside(books, next).map((x) => x.placement === null)).toEqual([true, false, false]);
 });
