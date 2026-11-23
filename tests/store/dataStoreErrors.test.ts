@@ -3,7 +3,7 @@ import * as repo from '../../src/persistence/repo';
 import { loadAll } from '../../src/persistence/repo';
 import { createDataStore } from '../../src/store/dataStore';
 import { createBook } from '../../src/domain/books';
-import { createShelf } from '../../src/domain/shelves';
+import { createShelf, setRowCount } from '../../src/domain/shelves';
 import { toBackup } from '../../src/domain/backup';
 import { DEFAULT_ROOM } from '../../src/persistence/db';
 
@@ -51,7 +51,7 @@ test('resize is all-or-nothing in the database', async () => {
   await s.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 1 });
   await s.getState().placeBooks([s.getState().books[0].id], { shelfId: id, row: 3, col: 0 });
   vi.spyOn(repo, 'saveShelves').mockRejectedValueOnce(new Error('fail'));
-  await s.getState().resizeShelf(id, 2, 4);
+  await s.getState().reshapeShelf(id, setRowCount(s.getState().shelves[0], 2));
   const disk = await loadAll();
   expect(disk.shelves[0].rowHeightsCm).toHaveLength(4);
   expect(disk.books[0].placement).not.toBeNull();
@@ -92,11 +92,11 @@ describe('import normalises foreign data', () => {
   test('nonsense sizes are clamped', async () => {
     const d = base();
     d.room = { widthCm: -5, depthCm: 400, heightCm: 260 };
-    d.shelves = [{ ...shelf, rowHeightsCm: [0, 33], colWidthsCm: Array(50).fill(30) }];
+    d.shelves = [{ ...shelf, rowHeightsCm: [0, 33], colWidthsCm: [Array(50).fill(30), [30]] }];
     const s = createDataStore();
     await s.getState().importData(toBackup(d));
     expect(s.getState().room.widthCm).toBeGreaterThanOrEqual(50);
     expect(s.getState().shelves[0].rowHeightsCm).toEqual([5, 33]);
-    expect(s.getState().shelves[0].colWidthsCm).toHaveLength(20);
+    expect(s.getState().shelves[0].colWidthsCm[0]).toHaveLength(20);
   });
 });

@@ -1,6 +1,10 @@
 import { db } from '../../src/persistence/db';
 import { loadAll } from '../../src/persistence/repo';
 import { createDataStore } from '../../src/store/dataStore';
+import { setColumnCount, setRowCount } from '../../src/domain/shelves';
+import { createShelf } from '../../src/domain/shelves';
+import { toBackup } from '../../src/domain/backup';
+import { DEFAULT_ROOM } from '../../src/persistence/db';
 
 beforeEach(async () => {
   await db.delete();
@@ -27,9 +31,9 @@ async function storeWithPlacedBooks() {
   return { s, id };
 }
 
-test('resizeShelf returns books outside to unplaced', async () => {
+test('reshapeShelf returns books outside to unplaced', async () => {
   const { s, id } = await storeWithPlacedBooks();
-  await s.getState().resizeShelf(id, 3, 4);
+  await s.getState().reshapeShelf(id, setRowCount(s.getState().shelves[0], 3));
   expect(s.getState().books).toHaveLength(3);
   expect(s.getState().books.every((b) => b.placement === null)).toBe(true);
   expect((await loadAll()).books.every((b) => b.placement === null)).toBe(true);
@@ -90,4 +94,26 @@ test('export then import restores data', async () => {
   await s.getState().importData(text);
   expect(s.getState().books).toHaveLength(2);
   expect((await loadAll()).books).toHaveLength(2);
+});
+
+test('reshapeShelf with fewer columns in one row only unplaces that row removed columns', async () => {
+  const s = createDataStore();
+  await s.getState().hydrate();
+  const id = await s.getState().addShelf('kubus');
+  const [a, b] = await s.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 2 });
+  await s.getState().placeBooks([a.id], { shelfId: id, row: 1, col: 3 });
+  await s.getState().placeBooks([b.id], { shelfId: id, row: 1, col: 0 });
+  await s.getState().reshapeShelf(id, setColumnCount(s.getState().shelves[0], 1, 2));
+  expect(s.getState().shelves[0].colWidthsCm[1]).toHaveLength(2);
+  const byId = Object.fromEntries((await loadAll()).books.map((x) => [x.id, x.placement]));
+  expect(byId[a.id]).toBeNull();
+  expect(byId[b.id]).not.toBeNull();
+});
+
+test('import refits rows whose widths do not fill the shelf', async () => {
+  const shelf = { ...createShelf('rak-buku', 'R'), innerWidthCm: 80 };
+  shelf.colWidthsCm = [[10, 10], [80], [80], [80], [80]];
+  const s = createDataStore();
+  await s.getState().importData(toBackup({ room: DEFAULT_ROOM, shelves: [shelf], books: [] }));
+  expect(s.getState().shelves[0].colWidthsCm[0]).toEqual([10, 68]);
 });
