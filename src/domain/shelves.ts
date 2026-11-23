@@ -1,4 +1,4 @@
-import type { Room, Shelf, ShelfModel } from './types';
+import type { Room, Shelf, ShelfModel, ShelfV1 } from './types';
 
 export interface ShelfPreset {
   label: string;
@@ -21,9 +21,15 @@ export const DEFAULT_SHELF_COLOR = '#b08355';
 export const DIM_MIN_CM = 5;
 export const DIM_MAX_CM = 300;
 export const MAX_ROWS_COLS = 20;
+export const MAX_INNER_WIDTH_CM = 1000;
+
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+/** Round to 0.1 cm. */
+const r1 = (v: number) => Math.round(v * 10) / 10;
 
 export function createShelf(model: ShelfModel, name: string, position = { x: 0, z: 0 }): Shelf {
   const p = SHELF_PRESETS[model];
+  const innerWidthCm = sum(p.colWidthsCm) + (p.colWidthsCm.length - 1) * DEFAULT_BOARD_CM;
   return {
     id: crypto.randomUUID(),
     name,
@@ -32,19 +38,19 @@ export function createShelf(model: ShelfModel, name: string, position = { x: 0, 
     rotationY: 0,
     elevationCm: p.elevationCm,
     rowHeightsCm: [...p.rowHeightsCm],
-    colWidthsCm: [...p.colWidthsCm],
+    innerWidthCm,
+    colWidthsCm: p.rowHeightsCm.map(() => [...p.colWidthsCm]),
     depthCm: p.depthCm,
     boardThicknessCm: DEFAULT_BOARD_CM,
     color: DEFAULT_SHELF_COLOR,
   };
 }
 
-const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 export function shelfSize(s: Shelf): { width: number; height: number; depth: number } {
   const b = s.boardThicknessCm;
   return {
-    width: sum(s.colWidthsCm) + (s.colWidthsCm.length + 1) * b,
+    width: s.innerWidthCm + 2 * b,
     height: sum(s.rowHeightsCm) + (s.rowHeightsCm.length + 1) * b,
     depth: s.depthCm,
   };
@@ -54,9 +60,10 @@ export function shelfSize(s: Shelf): { width: number; height: number; depth: num
 export function slotRect(s: Shelf, row: number, col: number): { x: number; y: number; width: number; height: number } {
   const b = s.boardThicknessCm;
   const { width } = shelfSize(s);
-  const x = -width / 2 + b + sum(s.colWidthsCm.slice(0, col)) + col * b;
+  const cols = s.colWidthsCm[row];
+  const x = -width / 2 + b + sum(cols.slice(0, col)) + col * b;
   const y = b + sum(s.rowHeightsCm.slice(0, row)) + row * b;
-  return { x, y, width: s.colWidthsCm[col], height: s.rowHeightsCm[row] };
+  return { x, y, width: cols[col], height: s.rowHeightsCm[row] };
 }
 
 export function clampDim(v: number): number {
@@ -64,15 +71,92 @@ export function clampDim(v: number): number {
   return Math.min(DIM_MAX_CM, Math.max(DIM_MIN_CM, v));
 }
 
-function resizeList(list: number[], n: number): number[] {
-  const count = Math.min(MAX_ROWS_COLS, Math.max(1, Math.floor(n) || 1));
-  if (count <= list.length) return list.slice(0, count);
-  const last = list[list.length - 1];
-  return [...list, ...Array(count - list.length).fill(last)];
+export const columnCount = (s: Shelf, row: number): number => s.colWidthsCm[row]?.length ?? 0;
+
+/** Narrowest inner width that still gives every column of every row DIM_MIN_CM. */
+export function minInnerWidth(s: Shelf): number {
+  const b = s.boardThicknessCm;
+  return Math.max(DIM_MIN_CM, ...s.colWidthsCm.map((c) => c.length * DIM_MIN_CM + (c.length - 1) * b));
 }
 
-export function resizeShelf(s: Shelf, rows: number, cols: number): Shelf {
-  return { ...s, rowHeightsCm: resizeList(s.rowHeightsCm, rows), colWidthsCm: resizeList(s.colWidthsCm, cols) };
+/**
+ * Make one row fill `innerWidthCm` exactly: non-last columns ≥ DIM_MIN_CM (rounded to 0.1),
+ * the last column takes the remainder; if that would drop below DIM_MIN_CM, shrink columns
+ * from the right until it fits.
+ */
+export function fitRow(widths: number[], innerWidthCm: number, board: number): number[] {
+  const n = widths.length;
+  const total = innerWidthCm - (n - 1) * board;
+  if (n <= 1) return [r1(total)];
+  const head = widths.slice(0, -1).map((w) => Math.max(DIM_MIN_CM, r1(Number.isFinite(w) ? w : DIM_MIN_CM)));
+  let deficit = DIM_MIN_CM - (total - sum(head));
+  for (let i = head.length - 1; i >= 0 && deficit > 0; i--) {
+    const cut = Math.min(deficit, head[i] - DIM_MIN_CM);
+    head[i] = r1(head[i] - cut);
+    deficit = r1(deficit - cut);
+  }
+  return [...head, r1(total - sum(head))];
+}
+
+const maxColumns = (innerWidthCm: number, board: number) =>
+  Math.min(MAX_ROWS_COLS, Math.max(1, Math.floor((innerWidthCm + board) / (DIM_MIN_CM + board))));
+
+const withRow = (s: Shelf, row: number, widths: number[]): Shelf => ({
+  ...s,
+  colWidthsCm: s.colWidthsCm.map((c, i) => (i === row ? widths : c)),
+});
+
+export function setRowCount(s: Shelf, rows: number): Shelf {
+  const count = Math.min(MAX_ROWS_COLS, Math.max(1, Math.floor(rows) || 1));
+  const n = s.rowHeightsCm.length;
+  if (count <= n) {
+    return { ...s, rowHeightsCm: s.rowHeightsCm.slice(0, count), colWidthsCm: s.colWidthsCm.slice(0, count) };
+  }
+  const topH = s.rowHeightsCm[n - 1];
+  const topC = s.colWidthsCm[n - 1];
+  return {
+    ...s,
+    rowHeightsCm: [...s.rowHeightsCm, ...Array(count - n).fill(topH)],
+    colWidthsCm: [...s.colWidthsCm, ...Array.from({ length: count - n }, () => [...topC])],
+  };
+}
+
+export function setColumnCount(s: Shelf, row: number, count: number): Shelf {
+  const b = s.boardThicknessCm;
+  const n = Math.min(maxColumns(s.innerWidthCm, b), Math.max(1, Math.floor(count) || 1));
+  const each = r1((s.innerWidthCm - (n - 1) * b) / n);
+  return withRow(s, row, fitRow(Array(n).fill(each), s.innerWidthCm, b));
+}
+
+export function setColumnWidth(s: Shelf, row: number, col: number, widthCm: number): Shelf {
+  const widths = [...s.colWidthsCm[row]];
+  if (col < 0 || col >= widths.length - 1) return s;
+  const b = s.boardThicknessCm;
+  const total = s.innerWidthCm - (widths.length - 1) * b;
+  const others = sum(widths.slice(0, -1)) - widths[col];
+  widths[col] = Math.min(Math.max(DIM_MIN_CM, widthCm), total - others - DIM_MIN_CM);
+  return withRow(s, row, fitRow(widths, s.innerWidthCm, b));
+}
+
+export function setInnerWidth(s: Shelf, innerWidthCm: number): Shelf {
+  const b = s.boardThicknessCm;
+  const target = Number.isFinite(innerWidthCm) ? r1(innerWidthCm) : s.innerWidthCm;
+  const inner = Math.min(MAX_INNER_WIDTH_CM, Math.max(minInnerWidth(s), target));
+  const colWidthsCm = s.colWidthsCm.map((cols) => {
+    const oldTotal = s.innerWidthCm - (cols.length - 1) * b;
+    const newTotal = inner - (cols.length - 1) * b;
+    return fitRow(cols.map((w) => (w * newTotal) / oldTotal), inner, b);
+  });
+  return { ...s, innerWidthCm: inner, colWidthsCm };
+}
+
+export function migrateShelfV1(s: ShelfV1): Shelf {
+  const flat = s.colWidthsCm;
+  return {
+    ...s,
+    innerWidthCm: sum(flat) + (flat.length - 1) * s.boardThicknessCm,
+    colWidthsCm: s.rowHeightsCm.map(() => [...flat]),
+  };
 }
 
 /** Half-extents of the rotated footprint's axis-aligned bounding box. */
