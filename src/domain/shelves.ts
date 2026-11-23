@@ -137,3 +137,13 @@ export function shelvesOverlap(a: Shelf, b: Shelf): boolean {
   }
   return true;
 }
+
+export function snapPosition(p: { x: number; z: number }, gridCm = 5): { x: number; z: number } {
+  const snap = (v: number) => Math.round(v / gridCm) * gridCm || 0;
+  return { x: snap(p.x), z: snap(p.z) };
+}
+
+export function snapRotation(deg: number, stepDeg = 15): number {
+  const snapped = Math.round(deg / stepDeg) * stepDeg;
+  return ((snapped % 360) + 360) % 360;
+}
