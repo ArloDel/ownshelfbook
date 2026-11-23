@@ -1,17 +1,18 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
 import { requestPersistentStorage } from '../persistence/repo';
 import { useDataStore } from '../store/dataStore';
 import { useUiStore, type Page } from '../store/uiStore';
+import { BackupButtons } from './BackupButtons';
 import { CollectionPage } from './collection/CollectionPage';
 import { RoomPage } from './room/RoomPage';
+import { SearchBox } from './SearchBox';
 
 const TABS: { page: Page; label: string }[] = [
   { page: 'room', label: 'Ruang 3D' },
   { page: 'collection', label: 'Koleksi' },
 ];
 
-/** Slots filled by later features (search, backup buttons). */
-export function App({ search, backup }: { search?: ReactNode; backup?: ReactNode }) {
+export function App() {
   const loaded = useDataStore((s) => s.loaded);
   const hydrate = useDataStore((s) => s.hydrate);
   const page = useUiStore((s) => s.page);
@@ -41,8 +42,10 @@ export function App({ search, backup }: { search?: ReactNode; backup?: ReactNode
             </button>
           ))}
         </nav>
-        <div className="topbar-search">{search}</div>
-        <div className="row">{backup}</div>
+        <div className="topbar-search">
+          <SearchBox />
+        </div>
+        <BackupButtons />
       </header>
       <main className={`page page-${page}`}>{page === 'room' ? <RoomPage /> : <CollectionPage />}</main>
     </div>
