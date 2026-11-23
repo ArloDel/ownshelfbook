@@ -42,3 +42,8 @@ export async function requestPersistentStorage(): Promise<boolean> {
     return false;
   }
 }
+
+/** Run several writes as one IndexedDB transaction: all succeed or none do. */
+export async function transact(fn: () => Promise<void>): Promise<void> {
+  await db.transaction('rw', db.books, db.shelves, db.meta, fn);
+}
