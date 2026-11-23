@@ -1,12 +1,21 @@
+import type { ReactNode } from 'react';
 import { useUiStore, type Mode } from '../../store/uiStore';
 import { Scene } from '../scene/Scene';
+import { AddShelfMenu } from './AddShelfMenu';
+import { RoomSettings } from './RoomSettings';
+import { ShelfPanel } from './ShelfPanel';
 
 const MODES: { mode: Mode; label: string; hint: string }[] = [
   { mode: 'tata', label: 'Tata', hint: 'Atur letak dan bentuk rak' },
   { mode: 'isi', label: 'Isi', hint: 'Taruh buku ke slot rak' },
 ];
 
-export function RoomPage({ left, right, toolbar }: { left?: React.ReactNode; right?: React.ReactNode; toolbar?: React.ReactNode }) {
+const HINTS: Record<Mode, string> = {
+  tata: 'Klik rak untuk memilih, seret untuk menggeser. Seret area kosong untuk memutar kamera.',
+  isi: 'Klik slot rak, lalu taruh buku dari daftar Belum ditata.',
+};
+
+export function RoomPage({ left, fillPanel }: { left?: ReactNode; fillPanel?: ReactNode }) {
   const mode = useUiStore((s) => s.mode);
   const setMode = useUiStore((s) => s.setMode);
   return (
@@ -28,13 +37,15 @@ export function RoomPage({ left, right, toolbar }: { left?: React.ReactNode; rig
               </button>
             ))}
           </div>
-          {toolbar}
+          <span className="hint grow">{HINTS[mode]}</span>
+          <AddShelfMenu />
+          <RoomSettings />
         </div>
         <div className="canvas-wrap">
           <Scene />
         </div>
       </section>
-      <aside className="room-right">{right}</aside>
+      <aside className="room-right">{mode === 'tata' ? <ShelfPanel /> : fillPanel}</aside>
     </div>
   );
 }
