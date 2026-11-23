@@ -147,3 +147,16 @@ export function snapRotation(deg: number, stepDeg = 15): number {
   const snapped = Math.round(deg / stepDeg) * stepDeg;
   return ((snapped % 360) + 360) % 360;
 }
+
+export function overlappingIds(shelves: Shelf[]): Set<string> {
+  const ids = new Set<string>();
+  for (let i = 0; i < shelves.length; i++) {
+    for (let j = i + 1; j < shelves.length; j++) {
+      if (shelvesOverlap(shelves[i], shelves[j])) {
+        ids.add(shelves[i].id);
+        ids.add(shelves[j].id);
+      }
+    }
+  }
+  return ids;
+}
