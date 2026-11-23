@@ -9,6 +9,7 @@ import { useUiStore } from '../../store/uiStore';
 import { BooksMesh } from './BooksMesh';
 import { RoomMesh } from './RoomMesh';
 import { ShelfMesh } from './ShelfMesh';
+import { SlotHits } from './SlotHits';
 
 const FLOOR = new Plane(new Vector3(0, 1, 0), 0);
 const TINT_SELECTED = '#2f8a6d';
@@ -28,6 +29,8 @@ function SceneContent() {
   const selectedShelfId = useUiStore((s) => s.selectedShelfId);
   const selectShelf = useUiStore((s) => s.selectShelf);
   const highlightId = useUiStore((s) => s.highlightBookId);
+  const selectedSlot = useUiStore((s) => s.selectedSlot);
+  const selectSlot = useUiStore((s) => s.selectSlot);
 
   const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
   const { raycaster, pointer, camera } = useThree();
@@ -93,9 +96,11 @@ function SceneContent() {
           <ShelfMesh
             key={s.id}
             shelf={s}
-            tint={overlaps.has(s.id) ? TINT_OVERLAP : s.id === selectedShelfId ? TINT_SELECTED : null}
+            tint={mode !== 'tata' ? null : overlaps.has(s.id) ? TINT_OVERLAP : s.id === selectedShelfId ? TINT_SELECTED : null}
             onPointerDown={onShelfDown(s)}
-          />
+          >
+            {mode === 'isi' && <SlotHits shelf={s} books={books} selected={selectedSlot} onSelect={selectSlot} />}
+          </ShelfMesh>
         ))}
         <BooksMesh books={books} shelves={shown} highlightId={highlightId} />
       </group>
