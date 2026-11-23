@@ -13,7 +13,9 @@ interface Props {
 export function NumberField({ label, value, onChange, min, max, suffix }: Props) {
   const id = useId();
   const [text, setText] = useState(String(value));
-  useEffect(() => setText(String(value)), [value]);
+  // Re-sync after every commit too: the parent may clamp further and keep `value` unchanged.
+  const [commits, setCommits] = useState(0);
+  useEffect(() => setText(String(value)), [value, commits]);
 
   const commit = () => {
     const n = Number(text.replace(',', '.'));
@@ -26,6 +28,7 @@ export function NumberField({ label, value, onChange, min, max, suffix }: Props)
     if (max !== undefined) v = Math.min(max, v);
     setText(String(v));
     if (v !== value) onChange(v);
+    setCommits((c) => c + 1);
   };
 
   return (
