@@ -156,3 +156,10 @@ test('overlappingIds lists every shelf that overlaps another', () => {
   const c = createShelf('rak-buku', 'C', { x: 300, z: 0 });
   expect([...overlappingIds([a, b, c])].sort()).toEqual([a.id, b.id].sort());
 });
+
+test('setColumnCount above the room maximum keeps custom widths', () => {
+  let s = setInnerWidth(createShelf('rak-buku', 'R'), 30); // max 4 columns
+  s = setColumnCount(s, 0, 4);
+  s = setColumnWidth(s, 0, 0, 9);
+  expect(setColumnCount(s, 0, 20).colWidthsCm[0]).toEqual(s.colWidthsCm[0]);
+});
