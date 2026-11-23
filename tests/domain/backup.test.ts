@@ -19,7 +19,7 @@ test('rejects non-JSON', () => {
 
 test('rejects other versions', () => {
   const obj = JSON.parse(toBackup(data));
-  obj.version = 2;
+  obj.version = 3;
   expect(() => parseBackup(JSON.stringify(obj))).toThrow();
 });
 
@@ -43,4 +43,30 @@ test('rejects missing room', () => {
 
 test('backupFileName uses local date', () => {
   expect(backupFileName(new Date(2026, 10, 3))).toBe('ownshelfbook-backup-2026-11-03.json');
+});
+
+test('writes version 2', () => {
+  expect(JSON.parse(toBackup(data)).version).toBe(2);
+});
+
+test('v1 files are converted to per-row columns', () => {
+  const obj = JSON.parse(toBackup(data));
+  obj.version = 1;
+  const { innerWidthCm: _i, ...shelf } = obj.shelves[0];
+  obj.shelves = [{ ...shelf, colWidthsCm: [30, 40] }];
+  const parsed = parseBackup(JSON.stringify(obj));
+  expect(parsed.shelves[0].colWidthsCm).toEqual([[30, 40], [30, 40], [30, 40], [30, 40]]);
+  expect(parsed.shelves[0].innerWidthCm).toBe(72);
+});
+
+test('v2 rejects column lists that do not match the rows', () => {
+  const obj = JSON.parse(toBackup(data));
+  obj.shelves[0].colWidthsCm = [[33]];
+  expect(() => parseBackup(JSON.stringify(obj))).toThrow();
+});
+
+test('v2 rejects a shelf without inner width', () => {
+  const obj = JSON.parse(toBackup(data));
+  delete obj.shelves[0].innerWidthCm;
+  expect(() => parseBackup(JSON.stringify(obj))).toThrow();
 });
