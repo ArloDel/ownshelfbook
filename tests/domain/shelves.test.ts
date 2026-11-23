@@ -1,8 +1,15 @@
 import {
   clampDim,
   clampShelfToRoom,
+  columnCount,
   createShelf,
-  resizeShelf,
+  fitRow,
+  migrateShelfV1,
+  minInnerWidth,
+  setColumnCount,
+  setColumnWidth,
+  setInnerWidth,
+  setRowCount,
   shelfSize,
   shelvesOverlap,
   slotRect,
@@ -30,15 +37,71 @@ test('wall shelf hangs at elevation 120', () => {
   expect(createShelf('dinding', 'D').elevationCm).toBe(120);
 });
 
-test('resizeShelf adds and removes at the end', () => {
-  const s = { ...createShelf('rendah', 'R'), rowHeightsCm: [20, 40], colWidthsCm: [10, 30, 50] };
-  expect(resizeShelf(s, 3, 2)).toMatchObject({ rowHeightsCm: [20, 40, 40], colWidthsCm: [10, 30] });
+test('presets render as before', () => {
+  expect(shelfSize(createShelf('rak-buku', 'R')).width).toBe(80);
+  expect(createShelf('kubus', 'K')).toMatchObject({ innerWidthCm: 138 });
+  expect(createShelf('kubus', 'K').colWidthsCm).toEqual([[33, 33, 33, 33], [33, 33, 33, 33], [33, 33, 33, 33], [33, 33, 33, 33]]);
 });
 
-test('resizeShelf clamps counts to 1..20', () => {
-  const r = resizeShelf(createShelf('rendah', 'R'), 0, 99);
-  expect(r.rowHeightsCm).toHaveLength(1);
-  expect(r.colWidthsCm).toHaveLength(20);
+test('slotRect follows the row own columns', () => {
+  const s = setColumnCount(createShelf('rak-buku', 'R'), 1, 2);
+  expect(s.colWidthsCm[1]).toEqual([37, 37]);
+  expect(slotRect(s, 1, 1)).toMatchObject({ x: -40 + 2 + 37 + 2, width: 37 });
+  expect(slotRect(s, 0, 0)).toMatchObject({ x: -38, width: 76 });
+});
+
+test('setColumnCount splits equally with remainder in the last column', () => {
+  expect(setColumnCount(createShelf('rak-buku', 'R'), 0, 3).colWidthsCm[0]).toEqual([24, 24, 24]);
+  const s = { ...createShelf('rak-buku', 'R'), innerWidthCm: 77, colWidthsCm: [[77], [77], [77], [77], [77]] };
+  expect(setColumnCount(s, 0, 3).colWidthsCm[0]).toEqual([24.3, 24.3, 24.4]);
+});
+
+test('setColumnCount cannot squeeze columns below 5 cm', () => {
+  const s = setInnerWidth(createShelf('rak-buku', 'R'), 30);
+  expect(columnCount(setColumnCount(s, 0, 20), 0)).toBe(4);
+});
+
+test('setColumnWidth: last column absorbs the change', () => {
+  const s = setColumnCount(createShelf('rak-buku', 'R'), 0, 2);
+  expect(setColumnWidth(s, 0, 0, 50).colWidthsCm[0]).toEqual([50, 24]);
+  expect(setColumnWidth(s, 0, 1, 50).colWidthsCm[0]).toEqual([37, 37]);
+});
+
+test('setColumnWidth clamps so the last column keeps 5 cm', () => {
+  const s = setColumnCount(createShelf('rak-buku', 'R'), 0, 2);
+  expect(setColumnWidth(s, 0, 0, 500).colWidthsCm[0]).toEqual([69, 5]);
+});
+
+test('setInnerWidth scales rows and respects the minimum', () => {
+  const s = setColumnCount(createShelf('rak-buku', 'R'), 0, 2);
+  const wide = setInnerWidth(s, 154);
+  expect(wide.colWidthsCm[0]).toEqual([76, 76]);
+  expect(wide.colWidthsCm[1]).toEqual([154]);
+  expect(setInnerWidth(s, 1).innerWidthCm).toBe(12);
+  expect(minInnerWidth(s)).toBe(12);
+});
+
+test('setRowCount copies the top row when growing', () => {
+  const s = setColumnCount(createShelf('rendah', 'R'), 1, 2);
+  const g = setRowCount(s, 3);
+  expect(g.rowHeightsCm).toEqual([35, 35, 35]);
+  expect(g.colWidthsCm[2]).toEqual(g.colWidthsCm[1]);
+  expect(setRowCount(s, 0).rowHeightsCm).toHaveLength(1);
+  expect(setRowCount(s, 0).colWidthsCm).toHaveLength(1);
+  expect(setRowCount(s, 99).rowHeightsCm).toHaveLength(20);
+});
+
+test('fitRow keeps the invariant', () => {
+  expect(fitRow([10, 10, 10], 50, 2)).toEqual([10, 10, 26]);
+  expect(fitRow([40, 40], 50, 2)).toEqual([40, 8]);
+  expect(fitRow([3, 100, 1], 50, 2)).toEqual([5, 36, 5]);
+});
+
+test('migrateShelfV1 copies the flat pattern to every row', () => {
+  const { innerWidthCm: _i, colWidthsCm: _c, ...rest } = createShelf('kubus', 'K');
+  const m = migrateShelfV1({ ...rest, colWidthsCm: [30, 40] });
+  expect(m.colWidthsCm).toEqual([[30, 40], [30, 40], [30, 40], [30, 40]]);
+  expect(m.innerWidthCm).toBe(72);
 });
 
 test.each([
