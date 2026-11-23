@@ -122,7 +122,8 @@ input[type='color'] {
   flex-direction: column;
   gap: 0.2rem;
 }
-.field > span:first-child {
+.field > span:first-child,
+.field > label:first-child {
   font-size: 0.8rem;
   color: var(--muted);
 }

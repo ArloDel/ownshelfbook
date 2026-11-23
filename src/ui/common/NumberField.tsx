@@ -6,12 +6,11 @@ interface Props {
   onChange(value: number): void;
   min?: number;
   max?: number;
-  step?: number;
   suffix?: string;
 }
 
 /** Number input that commits on blur/Enter and never emits NaN. */
-export function NumberField({ label, value, onChange, min, max, step = 1, suffix }: Props) {
+export function NumberField({ label, value, onChange, min, max, suffix }: Props) {
   const id = useId();
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
@@ -30,23 +29,20 @@ export function NumberField({ label, value, onChange, min, max, step = 1, suffix
   };
 
   return (
-    <label className="field" htmlFor={id}>
-      <span>{label}</span>
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
       <span className="with-suffix">
         <input
           id={id}
-          type="number"
+          type="text"
           inputMode="decimal"
           value={text}
-          min={min}
-          max={max}
-          step={step}
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === 'Enter' && commit()}
         />
         {suffix && <em>{suffix}</em>}
       </span>
-    </label>
+    </div>
   );
 }
