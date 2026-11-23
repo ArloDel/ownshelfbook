@@ -1,4 +1,5 @@
 import type { Room } from '../../domain/types';
+import { isClick } from './clicks';
 
 const WALL = 4;
 
@@ -7,7 +8,14 @@ export function RoomMesh({ room, onFloorClick }: { room: Room; onFloorClick?(): 
   const { widthCm: w, depthCm: d, heightCm: h } = room;
   return (
     <group>
-      <mesh rotation-x={-Math.PI / 2} receiveShadow onPointerDown={(e) => { e.stopPropagation(); onFloorClick?.(); }}>
+      <mesh
+        rotation-x={-Math.PI / 2}
+        receiveShadow
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isClick(e)) onFloorClick?.();
+        }}
+      >
         <planeGeometry args={[w, d]} />
         <meshStandardMaterial color="#d9cbb4" />
       </mesh>

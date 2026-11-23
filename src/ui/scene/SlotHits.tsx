@@ -3,6 +3,7 @@ import type { ThreeEvent } from '@react-three/fiber';
 import { slotUsage } from '../../domain/placement';
 import { slotRect } from '../../domain/shelves';
 import type { Book, Shelf, SlotRef } from '../../domain/types';
+import { isClick } from './clicks';
 
 interface Props {
   shelf: Shelf;
@@ -22,6 +23,7 @@ export function SlotHits({ shelf, books, selected, onSelect }: Props) {
       const over = slotUsage(books, shelf, r, c).overflow;
       const click = (e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation();
+        if (!isClick(e)) return;
         onSelect({ shelfId: shelf.id, row: r, col: c });
       };
       boxes.push(
