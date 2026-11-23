@@ -12,8 +12,10 @@ import {
   clampDim,
   clampShelfToRoom,
   createShelf,
+  fitRow,
+  MAX_INNER_WIDTH_CM,
   MAX_ROWS_COLS,
-  resizeShelf as resizeShelfDomain,
+  minInnerWidth,
 } from '../domain/shelves';
 import type { AppData, Book, Room, Shelf, ShelfModel, SlotRef } from '../domain/types';
 import { DEFAULT_ROOM } from '../persistence/db';
@@ -36,7 +38,8 @@ export interface DataState {
   deleteBooks(ids: string[]): Promise<void>;
   addShelf(model: ShelfModel): Promise<string>;
   updateShelf(id: string, patch: Partial<Shelf>): Promise<void>;
-  resizeShelf(id: string, rows: number, cols: number): Promise<void>;
+  /** Replace a shelf's shape (rows, columns, widths); books in slots that no longer exist go back to Belum ditata. */
+  reshapeShelf(id: string, shape: Shelf): Promise<void>;
   duplicateShelf(id: string): Promise<string>;
   deleteShelf(id: string): Promise<void>;
   placeBooks(ids: string[], slot: SlotRef): Promise<void>;
@@ -62,16 +65,33 @@ const clampRoom = (r: Room): Room => {
   };
 };
 
+const DIM_FALLBACK = 30;
+
+/** Keep rows, per-row columns and the inner width consistent; every row fills the shelf exactly. */
+function sanitizeShape(s: Shelf): Pick<Shelf, 'rowHeightsCm' | 'colWidthsCm' | 'innerWidthCm' | 'boardThicknessCm'> {
+  const b = Number.isFinite(s.boardThicknessCm) && s.boardThicknessCm > 0 ? Math.min(s.boardThicknessCm, 10) : 2;
+  const heights = s.rowHeightsCm.slice(0, MAX_ROWS_COLS).map(clampDim);
+  const rowHeightsCm = heights.length ? heights : [33];
+  const source = s.colWidthsCm.length ? s.colWidthsCm : [[Number.isFinite(s.innerWidthCm) ? s.innerWidthCm : 76]];
+  const cols = rowHeightsCm.map((_, i) => {
+    const row = source[i] ?? source[source.length - 1];
+    return (row.length ? row : [DIM_FALLBACK]).slice(0, MAX_ROWS_COLS);
+  });
+  const fallback = cols[0].reduce((a, w) => a + (Number.isFinite(w) ? w : 0), 0) + (cols[0].length - 1) * b;
+  const wanted = Number.isFinite(s.innerWidthCm) && s.innerWidthCm > 0 ? s.innerWidthCm : fallback;
+  const minimum = minInnerWidth({ ...s, boardThicknessCm: b, colWidthsCm: cols });
+  const innerWidthCm = Math.min(MAX_INNER_WIDTH_CM, Math.max(minimum, wanted));
+  return { rowHeightsCm, boardThicknessCm: b, innerWidthCm, colWidthsCm: cols.map((row) => fitRow(row, innerWidthCm, b)) };
+}
+
 function sanitizeShelf(s: Shelf, room: Room): Shelf {
   const elevation = Number.isFinite(s.elevationCm) ? Math.min(Math.max(0, s.elevationCm), room.heightCm) : 0;
   const rotation = Number.isFinite(s.rotationY) ? ((s.rotationY % 360) + 360) % 360 : 0;
   return clampShelfToRoom(
     {
       ...s,
+      ...sanitizeShape(s),
       depthCm: clampDim(s.depthCm),
-      rowHeightsCm: s.rowHeightsCm.slice(0, MAX_ROWS_COLS).map(clampDim),
-      colWidthsCm: s.colWidthsCm.slice(0, MAX_ROWS_COLS).map(clampDim),
-      boardThicknessCm: Number.isFinite(s.boardThicknessCm) && s.boardThicknessCm > 0 ? Math.min(s.boardThicknessCm, 10) : 2,
       elevationCm: elevation,
       rotationY: rotation,
       position: {
@@ -103,7 +123,7 @@ function normaliseImport(d: AppData): AppData {
       p.row >= 0 &&
       p.col >= 0 &&
       p.row < s.rowHeightsCm.length &&
-      p.col < s.colWidthsCm.length;
+      p.col < s.colWidthsCm[p.row].length;
     return valid ? b : { ...b, placement: null };
   });
   return { room, shelves, books: normalizeOrders(books) };
@@ -210,14 +230,14 @@ export const createDataStore = () =>
         await commit({ shelves: replaceShelf(shelf) }, () => repo.saveShelves([shelf]));
       },
 
-      async resizeShelf(id, rows, cols) {
-        const resized = clampShelfToRoom(resizeShelfDomain(shelfById(id), rows, cols), get().room);
+      async reshapeShelf(id, shape) {
+        const reshaped = sanitizeShelf({ ...shelfById(id), ...shape, id }, get().room);
         const before = get().books;
-        const books = returnBooksOutside(before, id, resized.rowHeightsCm.length, resized.colWidthsCm.length);
+        const books = returnBooksOutside(before, reshaped);
         const changed = changedBooks(before, books);
-        await commit({ books, shelves: replaceShelf(resized) }, async () => {
+        await commit({ books, shelves: replaceShelf(reshaped) }, async () => {
           await repo.saveBooks(changed);
-          await repo.saveShelves([resized]);
+          await repo.saveShelves([reshaped]);
         });
       },
 
@@ -230,7 +250,7 @@ export const createDataStore = () =>
             name: `${src.name} (salinan)`,
             position: { x: src.position.x + 20, z: src.position.z },
             rowHeightsCm: [...src.rowHeightsCm],
-            colWidthsCm: [...src.colWidthsCm],
+            colWidthsCm: src.colWidthsCm.map((row) => [...row]),
           },
           get().room,
         );
@@ -240,7 +260,7 @@ export const createDataStore = () =>
 
       async deleteShelf(id) {
         const before = get().books;
-        const books = returnBooksOutside(before, id, 0, 0);
+        const books = returnBooksOutside(before, { id, rowHeightsCm: [], colWidthsCm: [] });
         const changed = changedBooks(before, books);
         await commit({ books, shelves: get().shelves.filter((s) => s.id !== id) }, async () => {
           await repo.saveBooks(changed);
