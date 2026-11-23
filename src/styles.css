@@ -488,3 +488,70 @@ input[type='color'] {
   padding: 0.1rem 0;
   flex-wrap: nowrap;
 }
+
+/* Search and backup */
+.search {
+  position: relative;
+  width: min(30rem, 100%);
+}
+.search input {
+  width: 100%;
+}
+.search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  max-height: 22rem;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.search-results li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.search-results li.active,
+.search-results li:hover {
+  background: var(--paper);
+}
+.search-results small {
+  color: var(--muted);
+}
+.backup {
+  position: relative;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  z-index: 30;
+  cursor: pointer;
+  max-width: 24rem;
+}
+.toast.error {
+  background: var(--danger);
+}
