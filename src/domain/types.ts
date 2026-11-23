@@ -38,11 +38,17 @@ export interface Shelf {
   rotationY: number;
   elevationCm: number;
   rowHeightsCm: number[];
-  colWidthsCm: number[];
+  /** Width between the two side boards. Every row fills it exactly. */
+  innerWidthCm: number;
+  /** colWidthsCm[row] = column widths of that row, left→right. */
+  colWidthsCm: number[][];
   depthCm: number;
   boardThicknessCm: number;
   color: string;
 }
+
+/** Shelf as stored before per-row columns (DB v1, backup v1). */
+export type ShelfV1 = Omit<Shelf, 'colWidthsCm' | 'innerWidthCm'> & { colWidthsCm: number[] };
 
 export interface Room {
   widthCm: number;
