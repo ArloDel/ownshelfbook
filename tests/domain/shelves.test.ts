@@ -69,3 +69,18 @@ test('shelvesOverlap', () => {
   expect(shelvesOverlap(a, createShelf('rak-buku', 'C', { x: 80, z: 0 }))).toBe(false);
   expect(shelvesOverlap(a, { ...createShelf('rak-buku', 'D', { x: 60, z: 0 }), rotationY: 90 })).toBe(false);
 });
+
+import { snapPosition, snapRotation } from '../../src/domain/shelves';
+
+test('snapPosition rounds to the 5 cm grid', () => {
+  expect(snapPosition({ x: 12.4, z: -7.6 })).toEqual({ x: 10, z: -10 });
+});
+
+test.each([
+  [-20, 345],
+  [368, 15],
+  [7, 0],
+  [8, 15],
+])('snapRotation(%s) = %s', (i, o) => {
+  expect(snapRotation(i)).toBe(o);
+});
