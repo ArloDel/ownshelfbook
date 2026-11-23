@@ -1,22 +1,32 @@
 import { useState } from 'react';
 import { countBooksOutside } from '../../domain/placement';
-import { DIM_MAX_CM, DIM_MIN_CM, MAX_ROWS_COLS, SHELF_PRESETS, shelfSize, snapRotation } from '../../domain/shelves';
+import {
+  DIM_MAX_CM,
+  DIM_MIN_CM,
+  MAX_INNER_WIDTH_CM,
+  MAX_ROWS_COLS,
+  SHELF_PRESETS,
+  setColumnCount,
+  setColumnWidth,
+  setInnerWidth,
+  setRowCount,
+  shelfSize,
+  snapRotation,
+} from '../../domain/shelves';
+import type { Shelf } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { NumberField } from '../common/NumberField';
 
-type Pending =
-  | { kind: 'resize'; rows: number; cols: number; count: number }
-  | { kind: 'delete'; count: number }
-  | null;
+type Pending = { kind: 'reshape'; shape: Shelf; count: number } | { kind: 'delete'; count: number } | null;
 
 export function ShelfPanel() {
   const selectedId = useUiStore((s) => s.selectedShelfId);
   const selectShelf = useUiStore((s) => s.selectShelf);
   const shelf = useDataStore((s) => s.shelves.find((x) => x.id === selectedId));
   const books = useDataStore((s) => s.books);
-  const { updateShelf, resizeShelf, duplicateShelf, deleteShelf } = useDataStore.getState();
+  const { updateShelf, reshapeShelf, duplicateShelf, deleteShelf } = useDataStore.getState();
   const [pending, setPending] = useState<Pending>(null);
   const [resetKey, setResetKey] = useState(0);
 
@@ -29,13 +39,14 @@ export function ShelfPanel() {
   }
 
   const rows = shelf.rowHeightsCm.length;
-  const cols = shelf.colWidthsCm.length;
   const size = shelfSize(shelf);
+  const board = shelf.boardThicknessCm;
 
-  const requestResize = (r: number, c: number) => {
-    const count = countBooksOutside(books, shelf.id, r, c);
-    if (count > 0) setPending({ kind: 'resize', rows: r, cols: c, count });
-    else void resizeShelf(shelf.id, r, c);
+  /** Every shape edit goes through here: books that would lose their slot need a confirmation first. */
+  const reshape = (shape: Shelf) => {
+    const count = countBooksOutside(books, shape);
+    if (count > 0) setPending({ kind: 'reshape', shape, count });
+    else void reshapeShelf(shelf.id, shape);
   };
 
   const cancel = () => {
@@ -46,18 +57,21 @@ export function ShelfPanel() {
   const confirm = async () => {
     const p = pending;
     setPending(null);
-    if (p?.kind === 'resize') await resizeShelf(shelf.id, p.rows, p.cols);
+    if (p?.kind === 'reshape') await reshapeShelf(shelf.id, p.shape);
     if (p?.kind === 'delete') {
       selectShelf(null);
       await deleteShelf(shelf.id);
     }
   };
 
-  const setList = (key: 'rowHeightsCm' | 'colWidthsCm', i: number, v: number) => {
-    const list = [...shelf[key]];
-    list[i] = v;
-    void updateShelf(shelf.id, { [key]: list });
+  const setRowHeight = (row: number, v: number) => {
+    const heights = [...shelf.rowHeightsCm];
+    heights[row] = v;
+    reshape({ ...shelf, rowHeightsCm: heights });
   };
+
+  // Show the top row first, like the shelf itself.
+  const rowOrder = shelf.rowHeightsCm.map((_, i) => i).reverse();
 
   return (
     <div className="shelf-panel" key={`${shelf.id}-${resetKey}`}>
@@ -89,8 +103,15 @@ export function ShelfPanel() {
 
       <h4>Bentuk</h4>
       <div className="row">
-        <NumberField label="Jumlah tingkat" value={rows} min={1} max={MAX_ROWS_COLS} onChange={(v) => requestResize(v, cols)} />
-        <NumberField label="Jumlah kolom" value={cols} min={1} max={MAX_ROWS_COLS} onChange={(v) => requestResize(rows, v)} />
+        <NumberField
+          label="Lebar rak"
+          value={shelf.innerWidthCm + 2 * board}
+          min={DIM_MIN_CM + 2 * board}
+          max={MAX_INNER_WIDTH_CM + 2 * board}
+          suffix="cm"
+          onChange={(v) => reshape(setInnerWidth(shelf, v - 2 * board))}
+        />
+        <NumberField label="Jumlah tingkat" value={rows} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setRowCount(shelf, v))} />
       </div>
       <div className="row">
         <NumberField label="Kedalaman" value={shelf.depthCm} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => void updateShelf(shelf.id, { depthCm: v })} />
@@ -100,21 +121,39 @@ export function ShelfPanel() {
         </label>
       </div>
 
-      <h4>Tinggi tiap tingkat</h4>
-      <p className="hint">Tingkat 1 = paling bawah</p>
-      <div className="dims">
-        {shelf.rowHeightsCm.map((h, i) => (
-          <NumberField key={i} label={`Tingkat ${i + 1}`} value={h} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => setList('rowHeightsCm', i, v)} />
-        ))}
-      </div>
-
-      <h4>Lebar tiap kolom</h4>
-      <p className="hint">Kolom 1 = paling kiri (dilihat dari depan)</p>
-      <div className="dims">
-        {shelf.colWidthsCm.map((w, i) => (
-          <NumberField key={i} label={`Kolom ${i + 1}`} value={w} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => setList('colWidthsCm', i, v)} />
-        ))}
-      </div>
+      <h4>Tingkat</h4>
+      <p className="hint">Tingkat 1 = paling bawah. Kolom 1 = paling kiri (dilihat dari depan). Kolom terakhir menyesuaikan otomatis.</p>
+      {rowOrder.map((r) => {
+        const cols = shelf.colWidthsCm[r];
+        const n = r + 1;
+        return (
+          <fieldset key={r} className="tier" aria-label={`Tingkat ${n}`}>
+            <legend>Tingkat {n}</legend>
+            <div className="row">
+              <NumberField label={`Tinggi tingkat ${n}`} value={shelf.rowHeightsCm[r]} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => setRowHeight(r, v)} />
+              <NumberField label={`Jumlah kolom tingkat ${n}`} value={cols.length} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setColumnCount(shelf, r, v))} />
+            </div>
+            {cols.length > 1 && (
+              <div className="dims">
+                {cols.slice(0, -1).map((w, c) => (
+                  <NumberField
+                    key={c}
+                    label={`Tingkat ${n} kolom ${c + 1}`}
+                    value={w}
+                    min={DIM_MIN_CM}
+                    max={DIM_MAX_CM}
+                    suffix="cm"
+                    onChange={(v) => reshape(setColumnWidth(shelf, r, c, v))}
+                  />
+                ))}
+                <p className="auto-col">
+                  Kolom {cols.length}: {cols[cols.length - 1]} cm (otomatis)
+                </p>
+              </div>
+            )}
+          </fieldset>
+        );
+      })}
 
       <div className="row panel-actions">
         <button
@@ -126,19 +165,18 @@ export function ShelfPanel() {
           Duplikat
         </button>
         <span className="spacer" />
-        <button className="danger" onClick={() => setPending({ kind: 'delete', count: countBooksOutside(books, shelf.id, 0, 0) })}>
+        <button
+          className="danger"
+          onClick={() => setPending({ kind: 'delete', count: countBooksOutside(books, { id: shelf.id, rowHeightsCm: [], colWidthsCm: [] }) })}
+        >
           Hapus rak
         </button>
       </div>
 
       <ConfirmDialog
         open={pending !== null}
-        title={pending?.kind === 'delete' ? `Hapus ${shelf.name}?` : 'Kurangi ukuran rak?'}
-        message={
-          pending && pending.count > 0
-            ? `${pending.count} buku akan dikembalikan ke Belum ditata. Bukunya tidak dihapus.`
-            : 'Rak ini kosong.'
-        }
+        title={pending?.kind === 'delete' ? `Hapus ${shelf.name}?` : 'Ubah bentuk rak?'}
+        message={pending && pending.count > 0 ? `${pending.count} buku akan dikembalikan ke Belum ditata. Bukunya tidak dihapus.` : 'Rak ini kosong.'}
         confirmLabel={pending?.kind === 'delete' ? 'Hapus' : 'Kurangi'}
         danger
         onCancel={cancel}
