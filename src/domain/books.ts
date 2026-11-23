@@ -54,3 +54,31 @@ export function createBook(input: NewBookInput): Book {
     createdAt: Date.now(),
   };
 }
+
+export const MAX_SERIES_BATCH = 500;
+
+export interface NewSeriesInput {
+  series: string;
+  type: BookType;
+  from: number;
+  to: number;
+  author?: string;
+}
+
+export function createSeriesBooks(input: NewSeriesInput): Book[] {
+  const series = input.series.trim();
+  if (!series) throw new Error('Nama seri wajib diisi');
+  const { from, to } = input;
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < 1) {
+    throw new Error('Nomor volume harus bilangan bulat positif');
+  }
+  if (from > to) throw new Error('Volume awal tidak boleh lebih besar dari volume akhir');
+  if (to - from + 1 > MAX_SERIES_BATCH) {
+    throw new Error(`Maksimal ${MAX_SERIES_BATCH} volume sekali tambah`);
+  }
+  const books: Book[] = [];
+  for (let v = from; v <= to; v++) {
+    books.push(createBook({ title: series, series, volume: v, type: input.type, author: input.author }));
+  }
+  return books;
+}
