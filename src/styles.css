@@ -427,3 +427,64 @@ input[type='color'] {
   padding-top: 0.75rem;
   border-top: 1px solid var(--line);
 }
+
+/* Fill mode */
+.unplaced {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.unplaced h3,
+.slot-panel h3 {
+  font-size: 1rem;
+}
+.unplaced ul,
+.slot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.unplaced li label {
+  padding: 0.15rem 0.2rem 0.15rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-wrap: nowrap;
+}
+.unplaced li label:hover {
+  background: var(--paper);
+}
+.unplaced li.highlight label {
+  background: #fff1bf;
+}
+.group-head {
+  margin-top: 0.4rem;
+  cursor: pointer;
+}
+.checked-bar {
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+}
+.slot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.capacity {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.capacity > div {
+  height: 100%;
+  background: var(--accent);
+}
+.capacity.over > div {
+  background: var(--danger);
+}
+.slot-list li {
+  padding: 0.1rem 0;
+  flex-wrap: nowrap;
+}
