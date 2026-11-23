@@ -76,13 +76,19 @@ export function slotUsage(
   };
 }
 
-const isOutside = (b: Book, shelfId: string, rows: number, cols: number) =>
-  b.placement !== null && b.placement.shelfId === shelfId && (b.placement.row >= rows || b.placement.col >= cols);
+/** The parts of a shelf that decide which slots exist. A deleted shelf is a layout with no rows. */
+export type ShelfLayout = Pick<Shelf, 'id' | 'rowHeightsCm' | 'colWidthsCm'>;
 
-export function countBooksOutside(books: Book[], shelfId: string, rows: number, cols: number): number {
-  return books.filter((b) => isOutside(b, shelfId, rows, cols)).length;
+const isOutside = (b: Book, layout: ShelfLayout) => {
+  const p = b.placement;
+  if (p === null || p.shelfId !== layout.id) return false;
+  return p.row >= layout.rowHeightsCm.length || p.col >= (layout.colWidthsCm[p.row]?.length ?? 0);
+};
+
+export function countBooksOutside(books: Book[], layout: ShelfLayout): number {
+  return books.filter((b) => isOutside(b, layout)).length;
 }
 
-export function returnBooksOutside(books: Book[], shelfId: string, rows: number, cols: number): Book[] {
-  return books.map((b) => (isOutside(b, shelfId, rows, cols) ? { ...b, placement: null } : b));
+export function returnBooksOutside(books: Book[], layout: ShelfLayout): Book[] {
+  return books.map((b) => (isOutside(b, layout) ? { ...b, placement: null } : b));
 }
