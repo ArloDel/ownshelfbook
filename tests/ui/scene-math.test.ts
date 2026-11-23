@@ -15,3 +15,20 @@ test('books taller than the slot are clipped to the slot height', () => {
   const r = layoutBooksInSlot([book(3)], { x: -10, y: 0, width: 20, height: 15 });
   expect(r[0]).toMatchObject({ x: -8.5, height: 15, visible: true });
 });
+
+import { createShelf } from '../../src/domain/shelves';
+import { shelfBoards } from '../../src/ui/scene/ShelfMesh';
+import { placedBookBoxes } from '../../src/ui/scene/BooksMesh';
+import { placeBooks } from '../../src/domain/placement';
+
+test('shelfBoards counts outer boards, dividers and back panel', () => {
+  expect(shelfBoards(createShelf('rak-buku', 'R'))).toHaveLength(4 + 4 + 1);
+  expect(shelfBoards(createShelf('kubus', 'K'))).toHaveLength(4 + 3 + 3);
+});
+
+test('placedBookBoxes skips overflowed books', () => {
+  const shelf = createShelf('kubus', 'K');
+  const books = Array.from({ length: 30 }, () => createBook({ title: 'K', type: 'komik' }));
+  const placed = placeBooks(books, books.map((b) => b.id), { shelfId: shelf.id, row: 0, col: 0 });
+  expect(placedBookBoxes(placed, [shelf])).toHaveLength(22);
+});
