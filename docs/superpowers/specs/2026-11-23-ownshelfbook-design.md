@@ -108,7 +108,8 @@ interface Shelf {
   rotationY: number;      // derajat
   elevationCm: number;    // 0, kecuali rak dinding (menggantung)
   rowHeightsCm: number[]; // panjang = jumlah tingkat, bawah→atas
-  colWidthsCm: number[];  // panjang = jumlah kolom, kiri→kanan
+  innerWidthCm: number;   // lebar dalam rak (lihat 2026-11-23-per-row-columns-design.md)
+  colWidthsCm: number[][]; // per tingkat: lebar kolom kiri→kanan
   depthCm: number;
   boardThicknessCm: number;
   color: string;
@@ -164,6 +165,8 @@ Angka persis adalah keputusan builder.
 - *Keputusan pengguna:* buku yang ditaruh ke slot **tidak** otomatis mengalir ke slot berikutnya bila tidak muat. Semua masuk ke slot yang dipilih; pengguna memindahkan sendiri.
 - Jika total ketebalan buku > lebar slot: semua tetap tersimpan, slot ditandai "penuh/meluap", buku yang meluap tidak digambar atau digambar terpotong (keputusan builder), dan panel menampilkan peringatan.
 - Jika buku lebih tinggi dari tingkat: tetap boleh, tandai peringatan.
+
+> **Diperbarui:** jumlah dan lebar kolom kini diatur per tingkat — lihat `2026-11-23-per-row-columns-design.md`.
 
 **Mengubah ukuran rak yang sudah berisi**
 - Jumlah tingkat/kolom hanya bertambah/berkurang **dari ujung** (tingkat teratas, kolom paling kanan). Tidak ada hapus tingkat/kolom di tengah di v1, jadi indeks `row`/`col` buku lain tidak pernah bergeser. Tinggi/lebar tiap item tetap bisa diubah satu per satu.
