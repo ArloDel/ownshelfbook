@@ -124,6 +124,7 @@ export function setRowCount(s: Shelf, rows: number): Shelf {
 export function setColumnCount(s: Shelf, row: number, count: number): Shelf {
   const b = s.boardThicknessCm;
   const n = Math.min(maxColumns(s.innerWidthCm, b), Math.max(1, Math.floor(count) || 1));
+  if (n === s.colWidthsCm[row].length) return s;
   const each = r1((s.innerWidthCm - (n - 1) * b) / n);
   return withRow(s, row, fitRow(Array(n).fill(each), s.innerWidthCm, b));
 }
