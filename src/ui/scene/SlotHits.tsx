@@ -1,7 +1,7 @@
 import { Edges } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import { slotUsage } from '../../domain/placement';
-import { slotRect } from '../../domain/shelves';
+import { columnCount, slotRect } from '../../domain/shelves';
 import type { Book, Shelf, SlotRef } from '../../domain/types';
 import { isClick } from './clicks';
 
@@ -17,7 +17,7 @@ export function SlotHits({ shelf, books, selected, onSelect }: Props) {
   const d = shelf.depthCm;
   const boxes = [];
   for (let r = 0; r < shelf.rowHeightsCm.length; r++) {
-    for (let c = 0; c < shelf.colWidthsCm.length; c++) {
+    for (let c = 0; c < columnCount(shelf, r); c++) {
       const rect = slotRect(shelf, r, c);
       const isSel = selected?.shelfId === shelf.id && selected.row === r && selected.col === c;
       const over = slotUsage(books, shelf, r, c).overflow;

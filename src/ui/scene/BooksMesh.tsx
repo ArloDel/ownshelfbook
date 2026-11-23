@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three';
 import { booksInSlot } from '../../domain/placement';
-import { slotRect } from '../../domain/shelves';
+import { columnCount, slotRect } from '../../domain/shelves';
 import type { Book, Shelf } from '../../domain/types';
 import { bookLabel } from '../common/labels';
 import { layoutBooksInSlot } from './layout';
@@ -25,7 +25,7 @@ export function placedBookBoxes(books: Book[], shelves: Shelf[]): PlacedBook[] {
   const byId = new Map(books.map((b) => [b.id, b]));
   for (const shelf of shelves) {
     for (let r = 0; r < shelf.rowHeightsCm.length; r++) {
-      for (let c = 0; c < shelf.colWidthsCm.length; c++) {
+      for (let c = 0; c < columnCount(shelf, r); c++) {
         const inSlot = booksInSlot(books, { shelfId: shelf.id, row: r, col: c });
         if (!inSlot.length) continue;
         const rect = slotRect(shelf, r, c);
