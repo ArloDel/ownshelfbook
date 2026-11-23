@@ -1,6 +1,7 @@
-import type { AppData, Book, Room, Shelf } from './types';
+import { migrateShelfV1 } from './shelves';
+import type { AppData, Book, Room, Shelf, ShelfV1 } from './types';
 
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export function toBackup(d: AppData): string {
   return JSON.stringify({ version: BACKUP_VERSION, room: d.room, shelves: d.shelves, books: d.books }, null, 2);
@@ -21,7 +22,7 @@ function checkRoom(r: unknown): Room {
   return r as unknown as Room;
 }
 
-function checkShelf(s: unknown, i: number): Shelf {
+function checkShelf(s: unknown, i: number, version: number): Shelf {
   const ok =
     isObj(s) &&
     isStr(s.id) &&
@@ -33,12 +34,18 @@ function checkShelf(s: unknown, i: number): Shelf {
     isNum(s.rotationY) &&
     isNum(s.elevationCm) &&
     isNumList(s.rowHeightsCm) &&
-    isNumList(s.colWidthsCm) &&
+    (version === 1
+      ? isNumList(s.colWidthsCm)
+      : isNum(s.innerWidthCm) &&
+        Array.isArray(s.colWidthsCm) &&
+        Array.isArray(s.rowHeightsCm) &&
+        s.colWidthsCm.length === s.rowHeightsCm.length &&
+        s.colWidthsCm.every(isNumList)) &&
     isNum(s.depthCm) &&
     isNum(s.boardThicknessCm) &&
     isStr(s.color);
   if (!ok) fail(`rak ke-${i + 1}`);
-  return s as unknown as Shelf;
+  return version === 1 ? migrateShelfV1(s as unknown as ShelfV1) : (s as unknown as Shelf);
 }
 
 function checkBook(b: unknown, i: number): Book {
@@ -72,11 +79,12 @@ export function parseBackup(text: string): AppData {
     fail('bukan file JSON');
   }
   if (!isObj(raw)) fail('format tidak dikenal');
-  if (raw.version !== BACKUP_VERSION) fail(`versi ${String(raw.version)} tidak didukung`);
+  const version = raw.version;
+  if (version !== 1 && version !== BACKUP_VERSION) fail(`versi ${String(version)} tidak didukung`);
   if (!Array.isArray(raw.shelves) || !Array.isArray(raw.books)) fail('daftar rak/buku tidak ada');
   return {
     room: checkRoom(raw.room),
-    shelves: raw.shelves.map(checkShelf),
+    shelves: raw.shelves.map((sh, i) => checkShelf(sh, i, version as number)),
     books: raw.books.map(checkBook),
   };
 }
