@@ -44,6 +44,6 @@ test('mode switch and room actions sit together in one floating toolbar', () => 
   render(<RoomPage />);
   const bar = screen.getByRole('toolbar', { name: 'Alat ruang' });
   expect(within(bar).getByRole('radiogroup', { name: 'Mode' })).toBeInTheDocument();
-  expect(within(bar).getByRole('button', { name: '+ Tambah rak' })).toBeInTheDocument();
+  expect(within(bar).getByRole('button', { name: 'Tambah rak' })).toBeInTheDocument();
   expect(within(bar).getByRole('button', { name: 'Ukuran ruangan' })).toBeInTheDocument();
 });

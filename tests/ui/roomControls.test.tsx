@@ -11,7 +11,7 @@ beforeEach(resetAll);
 test('add shelf menu adds the chosen model and selects it', async () => {
   const user = userEvent.setup();
   render(<AddShelfMenu />);
-  await user.click(screen.getByRole('button', { name: '+ Tambah rak' }));
+  await user.click(screen.getByRole('button', { name: 'Tambah rak' }));
   await user.click(screen.getByRole('menuitem', { name: 'Rak kubus' }));
   const [shelf] = useDataStore.getState().shelves;
   expect(shelf.model).toBe('kubus');
