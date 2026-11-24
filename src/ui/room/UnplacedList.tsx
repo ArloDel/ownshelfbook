@@ -1,6 +1,8 @@
 import { Minus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { groupBooks } from '../collection/CollectionPage';
@@ -39,7 +41,7 @@ export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
           </Button>
         )}
       </header>
-      <input
+      <Input
         type="search"
         placeholder="Saring judul…"
         aria-label="Saring buku belum ditata"
@@ -58,10 +60,11 @@ export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
       {groups.map(([name, list]) => {
         const ids = list.map((b) => b.id);
         const all = ids.every((id) => checkedSet.has(id));
+        const some = !all && ids.some((id) => checkedSet.has(id));
         return (
           <div key={name} className="unplaced-group">
             <label className="row group-head">
-              <input type="checkbox" checked={all} onChange={() => toggleGroup(ids, all)} aria-label={`Pilih semua ${name}`} />
+              <Checkbox checked={all ? true : some ? 'indeterminate' : false} onCheckedChange={() => toggleGroup(ids, all)} aria-label={`Pilih semua ${name}`} />
               <strong className="grow">{name}</strong>
               <small>{list.length}</small>
             </label>
@@ -69,7 +72,7 @@ export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
               {list.map((b) => (
                 <li key={b.id} className={b.id === highlight ? 'highlight' : undefined}>
                   <label className="row">
-                    <input type="checkbox" checked={checkedSet.has(b.id)} onChange={() => toggleChecked(b.id)} aria-label={bookLabel(b)} />
+                    <Checkbox checked={checkedSet.has(b.id)} onCheckedChange={() => toggleChecked(b.id)} aria-label={bookLabel(b)} />
                     <span className="swatch" style={{ background: b.color }} />
                     <span>{bookLabel(b)}</span>
                   </label>

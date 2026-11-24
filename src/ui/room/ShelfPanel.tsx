@@ -1,4 +1,7 @@
+import { Copy, RotateCcw, RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { countBooksOutside } from '../../domain/placement';
 import {
   DIM_MAX_CM,
@@ -77,8 +80,9 @@ export function ShelfPanel() {
     <div className="shelf-panel" key={`${shelf.id}-${resetKey}`}>
       <label className="field shelf-name">
         <span>Nama rak</span>
-        <input
+        <Input
           aria-label="Nama rak"
+          className="-mx-2 h-9 border-transparent text-base font-semibold tracking-tight shadow-none hover:border-input"
           defaultValue={shelf.name}
           onBlur={(e) => e.target.value.trim() && void updateShelf(shelf.id, { name: e.target.value.trim() })}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
@@ -90,13 +94,23 @@ export function ShelfPanel() {
 
       <h4>Letak</h4>
       <div className="row">
-        <button aria-label="Putar kiri 15°" onClick={() => void updateShelf(shelf.id, { rotationY: snapRotation(shelf.rotationY - 15) })}>
-          ⟲
-        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Putar kiri 15°"
+          onClick={() => void updateShelf(shelf.id, { rotationY: snapRotation(shelf.rotationY - 15) })}
+        >
+          <RotateCcw aria-hidden />
+        </Button>
         <NumberField label="Rotasi" value={shelf.rotationY} min={0} max={359} suffix="°" onChange={(v) => void updateShelf(shelf.id, { rotationY: v })} />
-        <button aria-label="Putar kanan 15°" onClick={() => void updateShelf(shelf.id, { rotationY: snapRotation(shelf.rotationY + 15) })}>
-          ⟳
-        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Putar kanan 15°"
+          onClick={() => void updateShelf(shelf.id, { rotationY: snapRotation(shelf.rotationY + 15) })}
+        >
+          <RotateCw aria-hidden />
+        </Button>
       </div>
       {shelf.model === 'dinding' && (
         <NumberField label="Ketinggian dari lantai" value={shelf.elevationCm} min={0} max={250} suffix="cm" onChange={(v) => void updateShelf(shelf.id, { elevationCm: v })} />
@@ -158,21 +172,25 @@ export function ShelfPanel() {
       })}
 
       <div className="row panel-actions">
-        <button
+        <Button
+          variant="ghost"
           onClick={async () => {
             const id = await duplicateShelf(shelf.id);
             selectShelf(id);
           }}
         >
+          <Copy data-icon="inline-start" aria-hidden />
           Duplikat
-        </button>
+        </Button>
         <span className="spacer" />
-        <button
-          className="danger"
+        <Button
+          variant="ghost"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={() => setPending({ kind: 'delete', count: countBooksOutside(books, { id: shelf.id, rowHeightsCm: [], colWidthsCm: [] }) })}
         >
+          <Trash2 data-icon="inline-start" aria-hidden />
           Hapus rak
-        </button>
+        </Button>
       </div>
 
       <ConfirmDialog

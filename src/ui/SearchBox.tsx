@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { searchBooks } from '../domain/search';
 import type { Book } from '../domain/types';
 import { useDataStore } from '../store/dataStore';
@@ -38,8 +39,9 @@ export function SearchBox() {
 
   return (
     <div className="search">
-      <input
+      <Input
         type="search"
+        className="border-transparent bg-muted focus-visible:bg-card"
         role="combobox"
         aria-label="Cari buku"
         aria-expanded={show}

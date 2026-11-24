@@ -1,4 +1,6 @@
+import { ArrowDown, ArrowUp, Crosshair } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { booksInSlot, slotUsage } from '../../domain/placement';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
@@ -42,8 +44,8 @@ export function SlotPanel() {
       {usage.tooTall && <p className="warn">Ada buku lebih tinggi dari tingkat ini.</p>}
 
       <div className="row">
-        <button
-          className="primary grow"
+        <Button
+          className="grow"
           disabled={checked.length === 0 || placing}
           onClick={async () => {
             setPlacing(true);
@@ -56,8 +58,11 @@ export function SlotPanel() {
           }}
         >
           {placing ? 'Menaruh…' : `Taruh di slot ini (${checked.length})`}
-        </button>
-        <button onClick={() => focusShelf(shelf.id)}>Fokus ke rak</button>
+        </Button>
+        <Button variant="ghost" onClick={() => focusShelf(shelf.id)}>
+          <Crosshair data-icon="inline-start" aria-hidden />
+          Fokus ke rak
+        </Button>
       </div>
 
       <h4>Isi slot</h4>
@@ -67,20 +72,21 @@ export function SlotPanel() {
           <li key={b.id} className="row">
             <span className="swatch" style={{ background: b.color }} />
             <span className="grow">{bookLabel(b)}</span>
-            <button className="ghost" disabled={i === 0} aria-label={`Naikkan ${bookLabel(b)}`} onClick={() => void moveInSlot(b.id, i - 1)}>
-              ↑
-            </button>
-            <button
-              className="ghost"
+            <Button variant="ghost" size="icon-sm" disabled={i === 0} aria-label={`Naikkan ${bookLabel(b)}`} onClick={() => void moveInSlot(b.id, i - 1)}>
+              <ArrowUp aria-hidden />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
               disabled={i === list.length - 1}
               aria-label={`Turunkan ${bookLabel(b)}`}
               onClick={() => void moveInSlot(b.id, i + 1)}
             >
-              ↓
-            </button>
-            <button className="ghost" aria-label={`Keluarkan ${bookLabel(b)}`} onClick={() => void unplaceBooks([b.id])}>
+              <ArrowDown aria-hidden />
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground" aria-label={`Keluarkan ${bookLabel(b)}`} onClick={() => void unplaceBooks([b.id])}>
               Keluarkan
-            </button>
+            </Button>
           </li>
         ))}
       </ol>

@@ -649,17 +649,6 @@
   .shelf-panel .with-suffix input {
     width: 4.5rem;
   }
-  .shelf-name input {
-    height: 36px;
-    margin: 0 calc(-1 * var(--space-2));
-    border-color: transparent;
-    font-size: var(--text-lg);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .shelf-name input:hover {
-    border-color: var(--line);
-  }
   .shelf-name > span:first-child {
     display: none;
   }

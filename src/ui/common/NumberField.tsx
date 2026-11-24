@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 interface Props {
   label: string;
@@ -37,8 +38,9 @@ export function NumberField({ label, shortLabel, value, onChange, min, max, suff
     <div className="field">
       <label htmlFor={id}>{shortLabel ?? label}</label>
       <span className="with-suffix">
-        <input
+        <Input
           id={id}
+          className="w-20"
           aria-label={shortLabel ? label : undefined}
           type="text"
           inputMode="decimal"
