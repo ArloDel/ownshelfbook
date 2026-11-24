@@ -4,3 +4,5 @@ dist
 .claude/settings.local.json
 *.log
 *.tsbuildinfo
+.superdesign/*
+!.superdesign/design-system.md
