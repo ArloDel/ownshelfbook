@@ -38,7 +38,7 @@ JTBD: "Record what I own quickly (whole series at once), then see and arrange it
 | 3D canvas bg | `#f1efeb` | behind the room |
 
 ## Typography
-- Family: `Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`. Global `font-variant-numeric: tabular-nums`.
+- Family: `Geist Variable` (bundled via @fontsource, works offline), falling back to `system-ui, 'Segoe UI', Roboto, sans-serif`. Global `font-variant-numeric: tabular-nums`.
 - Scale: 12 / 13 / 14 (base) / 16 / 20 / 28 px.
 - Weights: 400 body, 500 labels & buttons, 600 headings. Headings use slight negative tracking (-0.01em).
 - Labels: sentence case, 12px, `--muted`. No uppercase eyebrows.
@@ -54,6 +54,9 @@ JTBD: "Record what I own quickly (whole series at once), then see and arrange it
 - Borders 1px `--line`; inputs borderless-feeling (1px line, focus ring 2px accent at 30% alpha).
 
 ## Components
+Built from **shadcn/ui** (radix-nova, Tailwind v4) in `src/components/ui/`. The shadcn tokens are mapped onto this palette in `src/styles.css`: `--primary` = accent green, `--muted`/`--accent`/`--secondary` = hover grey, `--muted-foreground` = muted text, `--destructive` = danger, `--border`/`--input` = line, `--ring` = accent.
+App CSS lives in `@layer components`, so Tailwind utilities on shadcn components win; style shadcn components with utility classes, not app CSS.
+
 - **Primary button**: solid accent, 32px tall, 12px horizontal padding, 500 weight.
 - **Ghost button**: no border, `--ink`, hover `--hover`.
 - **Danger**: text `--danger`, ghost style; solid danger only inside the confirm dialog.
