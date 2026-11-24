@@ -8,6 +8,7 @@ import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { BooksMesh } from './BooksMesh';
 import { CameraFocus } from './CameraFocus';
+import { Lights } from './Lights';
 import { RoomMesh } from './RoomMesh';
 import { ShelfMesh } from './ShelfMesh';
 import { SlotHits } from './SlotHits';
@@ -89,8 +90,7 @@ function SceneContent() {
 
   return (
     <>
-      <hemisphereLight args={['#fffaf0', '#b9a88f', 0.9]} />
-      <directionalLight position={[3, 5, 4]} intensity={1.4} castShadow shadow-mapSize={[2048, 2048]} />
+      <Lights />
       <group scale={0.01}>
         <RoomMesh room={room} onFloorClick={() => mode === 'tata' && selectShelf(null)} />
         {shown.map((s) => (
@@ -115,7 +115,7 @@ export function Scene() {
   const room = useDataStore.getState().room;
   return (
     <Canvas
-      shadows
+      shadows="soft"
       camera={{ position: [room.widthCm / 200, 1.9, room.depthCm / 100], fov: 50, near: 0.05, far: 100 }}
       style={{ background: '#e9e2d6' }}
     >
