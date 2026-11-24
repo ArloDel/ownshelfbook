@@ -62,7 +62,7 @@ export function CollectionPage() {
     <div className="collection">
       <div className="toolbar">
         <h2>{books.length} buku</h2>
-        <label className="field inline">
+        <label className="field field-inline">
           <span>Jenis</span>
           <NativeSelect size="sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
             <option value="semua">Semua</option>
@@ -70,7 +70,7 @@ export function CollectionPage() {
             <option value="buku">Buku</option>
           </NativeSelect>
         </label>
-        <label className="field inline">
+        <label className="field field-inline">
           <span>Status</span>
           <NativeSelect size="sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
             <option value="semua">Semua</option>
