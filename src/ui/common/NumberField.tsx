@@ -2,6 +2,8 @@ import { useEffect, useId, useState } from 'react';
 
 interface Props {
   label: string;
+  /** Shorter text shown on screen; `label` stays the accessible name. */
+  shortLabel?: string;
   value: number;
   onChange(value: number): void;
   min?: number;
@@ -10,7 +12,7 @@ interface Props {
 }
 
 /** Number input that commits on blur/Enter and never emits NaN. */
-export function NumberField({ label, value, onChange, min, max, suffix }: Props) {
+export function NumberField({ label, shortLabel, value, onChange, min, max, suffix }: Props) {
   const id = useId();
   const [text, setText] = useState(String(value));
   // Re-sync after every commit too: the parent may clamp further and keep `value` unchanged.
@@ -33,10 +35,11 @@ export function NumberField({ label, value, onChange, min, max, suffix }: Props)
 
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{shortLabel ?? label}</label>
       <span className="with-suffix">
         <input
           id={id}
+          aria-label={shortLabel ? label : undefined}
           type="text"
           inputMode="decimal"
           value={text}
