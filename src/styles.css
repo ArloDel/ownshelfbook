@@ -86,6 +86,15 @@ button {
 button:hover:not(:disabled) {
   border-color: var(--muted);
 }
+button {
+  transition:
+    transform 80ms ease-out,
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -621,5 +630,12 @@ input[type='color'] {
   }
   .room-toolbar .hint {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
   }
 }
