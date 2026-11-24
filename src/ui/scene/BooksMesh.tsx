@@ -6,6 +6,7 @@ import { booksInSlot } from '../../domain/placement';
 import { columnCount, slotRect } from '../../domain/shelves';
 import type { Book, Shelf } from '../../domain/types';
 import { bookLabel } from '../common/labels';
+import { heightFactor } from './bookLook';
 import { layoutBooksInSlot } from './layout';
 
 const BOOK_DEPTH = { komik: 13, buku: 15 } as const;
@@ -33,11 +34,12 @@ export function placedBookBoxes(books: Book[], shelves: Shelf[]): PlacedBook[] {
           if (!box.visible) continue;
           const book = byId.get(box.id)!;
           const depth = Math.max(2, Math.min(BOOK_DEPTH[book.type], shelf.depthCm - 2));
+          const height = box.height * heightFactor(book.id);
           out.push({
             book,
             shelf,
-            local: [box.x, box.y + box.height / 2, shelf.depthCm / 2 - depth / 2 - 1],
-            size: [box.width * 0.96, box.height, depth],
+            local: [box.x, box.y + height / 2, shelf.depthCm / 2 - depth / 2 - 1],
+            size: [box.width * 0.96, height, depth],
           });
         }
       }
