@@ -6,7 +6,7 @@ import { booksInSlot } from '../../domain/placement';
 import { columnCount, slotRect } from '../../domain/shelves';
 import type { Book, Shelf } from '../../domain/types';
 import { bookLabel } from '../common/labels';
-import { heightFactor, leanBook } from './bookLook';
+import { bandColor, heightFactor, leanBook, spineBands } from './bookLook';
 import { layoutBooksInSlot } from './layout';
 
 const BOOK_DEPTH = { komik: 13, buku: 15 } as const;
@@ -62,6 +62,8 @@ export function placedBookBoxes(books: Book[], shelves: Shelf[]): PlacedBook[] {
 
 const dummy = new Object3D();
 const shelfMatrix = new Matrix4();
+const bookMatrix = new Matrix4();
+const partMatrix = new Matrix4();
 const tmp = new Color();
 
 function shelfWorld(s: Shelf, m: Matrix4) {
@@ -75,25 +77,42 @@ function shelfWorld(s: Shelf, m: Matrix4) {
 export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shelves: Shelf[]; highlightId?: string | null }) {
   const placed = useMemo(() => placedBookBoxes(books, shelves), [books, shelves]);
   const ref = useRef<InstancedMesh>(null);
+  const bandsRef = useRef<InstancedMesh>(null);
   const capacity = Math.max(1, placed.length);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
-    if (!mesh) return;
+    const bands = bandsRef.current;
+    if (!mesh || !bands) return;
     placed.forEach((p, i) => {
+      // Book frame: shelf → book centre → lean.
       shelfWorld(p.shelf, shelfMatrix);
       dummy.position.set(...p.local);
       dummy.rotation.set(0, 0, p.tilt);
-      dummy.scale.set(...p.size);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix.premultiply(shelfMatrix));
-      tmp.set(p.book.id === highlightId ? '#ffd54a' : p.book.color);
-      mesh.setColorAt(i, tmp);
+      bookMatrix.multiplyMatrices(shelfMatrix, dummy.matrix);
+
+      const color = p.book.id === highlightId ? '#ffd54a' : p.book.color;
+      mesh.setMatrixAt(i, partMatrix.multiplyMatrices(bookMatrix, partMatrix.makeScale(...p.size)));
+      mesh.setColorAt(i, tmp.set(color));
+
+      spineBands(p.size).forEach((band, k) => {
+        dummy.position.set(...band.position);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(...band.size);
+        dummy.updateMatrix();
+        bands.setMatrixAt(i * 2 + k, partMatrix.multiplyMatrices(bookMatrix, dummy.matrix));
+        bands.setColorAt(i * 2 + k, tmp.set(bandColor(color)));
+      });
     });
     mesh.count = placed.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    mesh.computeBoundingSphere();
+    bands.count = placed.length * 2;
+    for (const m of [mesh, bands]) {
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      m.computeBoundingSphere();
+    }
   }, [placed, highlightId]);
 
   return (
@@ -101,6 +120,10 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
       <instancedMesh key={capacity} ref={ref} args={[undefined, undefined, capacity]} castShadow raycast={() => null}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.7} />
+      </instancedMesh>
+      <instancedMesh key={`bands-${capacity}`} ref={bandsRef} args={[undefined, undefined, capacity * 2]} raycast={() => null}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial roughness={0.6} />
       </instancedMesh>
       <SpineLabels placed={placed} shelves={shelves} />
     </>
@@ -140,13 +163,13 @@ function SpineLabels({ placed, shelves }: { placed: PlacedBook[]; shelves: Shelf
               position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.05]}
               rotation-z={p.tilt - Math.PI / 2}
               fontSize={Math.min(p.size[0] * 0.55, 1.4)}
-              maxWidth={p.size[1] - 2}
+              maxWidth={p.size[1] - 2.6}
               color={readableOn(p.book.color)}
               anchorX="center"
               anchorY="middle"
               overflowWrap="break-word"
               whiteSpace="nowrap"
-              clipRect={[-(p.size[1] - 2) / 2, -p.size[0], (p.size[1] - 2) / 2, p.size[0]]}
+              clipRect={[-(p.size[1] - 2.6) / 2, -p.size[0], (p.size[1] - 2.6) / 2, p.size[0]]}
             >
               {bookLabel(p.book)}
             </Text>
