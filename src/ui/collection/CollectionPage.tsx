@@ -43,9 +43,7 @@ export function CollectionPage() {
   return (
     <div className="collection">
       <div className="toolbar">
-        <h2>
-          Koleksi <small>{books.length} buku</small>
-        </h2>
+        <h2>{books.length} buku</h2>
         <label className="field inline">
           <span>Jenis</span>
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
