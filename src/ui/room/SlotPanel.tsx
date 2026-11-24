@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Crosshair } from 'lucide-react';
+import { ArrowDown, ArrowUp, Crosshair, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { booksInSlot, slotUsage } from '../../domain/placement';
@@ -84,8 +84,15 @@ export function SlotPanel() {
             >
               <ArrowDown aria-hidden />
             </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground" aria-label={`Keluarkan ${bookLabel(b)}`} onClick={() => void unplaceBooks([b.id])}>
-              Keluarkan
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={`Keluarkan ${bookLabel(b)}`}
+              title="Keluarkan dari slot"
+              onClick={() => void unplaceBooks([b.id])}
+            >
+              <X aria-hidden />
             </Button>
           </li>
         ))}
