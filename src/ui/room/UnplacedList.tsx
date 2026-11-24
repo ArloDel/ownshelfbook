@@ -1,4 +1,6 @@
+import { Minus } from 'lucide-react';
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { groupBooks } from '../collection/CollectionPage';
@@ -32,9 +34,9 @@ export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
         <h3 className="grow">Belum ditata</h3>
         <small className="count">{unplaced.length}</small>
         {onCollapse && (
-          <button className="ghost icon" aria-label="Sembunyikan Belum ditata" title="Sembunyikan" onClick={onCollapse}>
-            –
-          </button>
+          <Button variant="ghost" size="icon-sm" aria-label="Sembunyikan Belum ditata" title="Sembunyikan" onClick={onCollapse}>
+            <Minus aria-hidden />
+          </Button>
         )}
       </header>
       <input
@@ -47,9 +49,9 @@ export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
       {checked.length > 0 && (
         <div className="row checked-bar">
           <span className="grow">{checked.length} dipilih</span>
-          <button className="ghost" onClick={() => setChecked([])}>
+          <Button variant="ghost" size="sm" onClick={() => setChecked([])}>
             Batal pilih
-          </button>
+          </Button>
         </div>
       )}
       {unplaced.length === 0 && <p className="hint">Semua buku sudah ditata.</p>}

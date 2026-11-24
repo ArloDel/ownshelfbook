@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore, type Mode } from '../../store/uiStore';
 import { Scene } from '../scene/Scene';
@@ -50,9 +53,9 @@ export function RoomPage() {
           <UnplacedList onCollapse={() => setListOpen(false)} />
         </aside>
       ) : (
-        <button className="sheet-chip" aria-expanded={false} onClick={() => setListOpen(true)}>
+        <Button variant="outline" className="sheet-chip" aria-expanded={false} onClick={() => setListOpen(true)}>
           Belum ditata <span className="count">{unplacedCount}</span>
-        </button>
+        </Button>
       )}
 
       {mode === 'tata' && shelfSelected && (
@@ -69,21 +72,29 @@ export function RoomPage() {
       <div className="room-dock">
         <p className="caption">{caption}</p>
         <div role="toolbar" aria-label="Alat ruang" className="room-toolbar">
-          <div className="segmented" role="radiogroup" aria-label="Mode">
+          <ToggleGroup
+            type="single"
+            role="radiogroup"
+            aria-label="Mode"
+            spacing={0}
+            value={mode}
+            // Radix lets a single toggle group go empty; keep one mode always on.
+            onValueChange={(v) => v && setMode(v as Mode)}
+            className="rounded-full bg-muted p-0.5"
+          >
             {MODES.map((m) => (
-              <button
+              <ToggleGroupItem
                 key={m.mode}
-                role="radio"
-                aria-checked={mode === m.mode}
+                value={m.mode}
                 title={m.hint}
-                className={mode === m.mode ? 'active' : ''}
-                onClick={() => setMode(m.mode)}
+                size="sm"
+                className="rounded-full px-4 text-muted-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
               >
                 {m.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
-          <span className="divider" aria-hidden />
+          </ToggleGroup>
+          <Separator orientation="vertical" className="mx-1 h-6!" />
           <AddShelfMenu />
           <RoomSettings />
         </div>
