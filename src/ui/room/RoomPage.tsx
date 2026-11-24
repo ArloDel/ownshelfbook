@@ -88,7 +88,7 @@ export function RoomPage() {
                 value={m.mode}
                 title={m.hint}
                 size="sm"
-                className="rounded-full px-4 text-muted-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
+                className="rounded-full! px-4! text-muted-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
               >
                 {m.label}
               </ToggleGroupItem>
