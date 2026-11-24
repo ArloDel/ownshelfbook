@@ -10,14 +10,18 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
   const [to, setTo] = useState('1');
   const [author, setAuthor] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    setSaving(true);
     try {
       await addSeries({ series, type, from: Number(from), to: Number(to), author });
       onDone();
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -58,8 +62,8 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
         <button type="button" onClick={onDone}>
           Batal
         </button>
-        <button type="submit" className="primary">
-          Simpan
+        <button type="submit" className="primary" disabled={saving}>
+          {saving ? 'Menyimpan…' : 'Simpan'}
         </button>
       </div>
     </form>

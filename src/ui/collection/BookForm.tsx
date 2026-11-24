@@ -16,6 +16,7 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
   const [thickness, setThickness] = useState(book?.thicknessCm.toString() ?? '');
   const [height, setHeight] = useState(book?.heightCm.toString() ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const name = editing ? 'Edit buku' : 'Tambah buku';
 
   async function submit(e: FormEvent) {
@@ -25,6 +26,7 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
       setError('Volume harus bilangan bulat');
       return;
     }
+    setSaving(true);
     try {
       if (!editing) {
         await addBook({ title, series, volume: vol, type, author, notes });
@@ -48,6 +50,8 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
       onDone();
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -108,8 +112,8 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
         <button type="button" onClick={onDone}>
           Batal
         </button>
-        <button type="submit" className="primary">
-          Simpan
+        <button type="submit" className="primary" disabled={saving}>
+          {saving ? 'Menyimpan…' : 'Simpan'}
         </button>
       </div>
     </form>
