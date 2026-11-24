@@ -33,7 +33,7 @@ test('place checked books into the selected slot, then take one out', async () =
   await user.click(screen.getByRole('button', { name: 'Taruh di slot ini (3)' }));
   await waitFor(() => expect(within(slot()).getAllByRole('listitem')).toHaveLength(3));
   expect(within(unplaced()).queryByRole('checkbox', { name: 'Naruto 1' })).not.toBeInTheDocument();
-  expect(useUiStore.getState().checkedBookIds).toEqual([]);
+  await waitFor(() => expect(useUiStore.getState().checkedBookIds).toEqual([]));
 
   await user.click(within(slot()).getByRole('button', { name: 'Keluarkan Naruto 1' }));
   await waitFor(() => expect(within(slot()).getAllByRole('listitem')).toHaveLength(2));
