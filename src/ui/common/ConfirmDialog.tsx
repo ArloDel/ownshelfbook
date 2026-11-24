@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Props {
   open: boolean;
@@ -12,24 +14,32 @@ interface Props {
 
 export function ConfirmDialog({ open, title, message, confirmLabel, danger, onConfirm, onCancel }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (open) boxRef.current?.focus();
-  }, [open]);
-  if (!open) return null;
   return (
-    <div className="backdrop" onKeyDown={(e) => e.key === 'Escape' && onCancel()}>
-      <div ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="dialog">
-        <h2 id="confirm-title">{title}</h2>
-        <p>{message}</p>
-        <div className="row end">
-          <button onClick={onCancel}>
+    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent
+        ref={boxRef}
+        tabIndex={-1}
+        showCloseButton={false}
+        className="sm:max-w-sm"
+        // Focus the dialog itself, not a button: an Enter that opened it must not also press Batal.
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          boxRef.current?.focus();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>
             Batal
-          </button>
-          <button className={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+          </Button>
+          <Button variant={danger ? 'destructive' : 'default'} className={danger ? 'bg-destructive text-white hover:bg-destructive/90' : undefined} onClick={onConfirm}>
             {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
