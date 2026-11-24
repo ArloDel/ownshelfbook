@@ -379,17 +379,31 @@ input[type='color'] {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(30, 24, 18, 0.35);
+  background: rgba(28, 27, 25, 0.25);
   display: grid;
   place-items: center;
   z-index: 10;
 }
 .dialog {
-  background: var(--panel);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  width: min(26rem, 90vw);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  width: min(25rem, 90vw);
+  box-shadow: var(--shadow-float);
+}
+.dialog h2 {
+  font-size: var(--text-lg);
+}
+.dialog p {
+  color: var(--muted);
+}
+/* Inside the confirm dialog the destructive action is the one solid button. */
+.dialog button.danger {
+  background: var(--danger);
+  color: #fff;
+}
+.dialog button.danger:hover:not(:disabled) {
+  background: #9a2019;
 }
 .dialog p {
   margin: var(--space-3) 0 var(--space-5);
@@ -620,9 +634,14 @@ button.icon {
   flex-direction: column;
   gap: var(--space-2);
 }
-.unplaced h3,
+.unplaced h3 {
+  font-size: var(--text-base);
+}
 .slot-panel h3 {
   font-size: var(--text-lg);
+}
+.unplaced header {
+  flex-wrap: nowrap;
 }
 .unplaced ul,
 .slot-list {
@@ -637,13 +656,14 @@ button.icon {
   flex-wrap: nowrap;
 }
 .unplaced li label:hover {
-  background: var(--paper);
+  background: var(--hover);
 }
 .unplaced li.highlight label {
   background: #fff1bf;
 }
 .group-head {
-  margin-top: var(--space-1h);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 .bulk-bar {
@@ -656,7 +676,7 @@ button.icon {
   margin-bottom: var(--space-4);
 }
 .checked-bar {
-  background: var(--paper);
+  background: var(--hover);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
@@ -667,7 +687,7 @@ button.icon {
   gap: var(--space-2);
 }
 .capacity {
-  height: 8px;
+  height: 4px;
   border-radius: var(--radius-pill);
   background: var(--line);
   overflow: hidden;
@@ -710,10 +730,9 @@ button.icon {
   padding: var(--space-1);
   max-height: 22rem;
   overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
 }
 .search-results li {
   display: flex;
@@ -725,7 +744,7 @@ button.icon {
 }
 .search-results li.active,
 .search-results li:hover {
-  background: var(--paper);
+  background: var(--hover);
 }
 .search-results small {
   color: var(--muted);
@@ -743,11 +762,12 @@ button.icon {
 }
 .toast {
   position: fixed;
-  right: var(--space-4);
-  bottom: var(--space-4);
+  right: var(--space-6);
+  top: 64px;
   margin: 0;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
   background: var(--ink);
   color: #fff;
   z-index: 30;
