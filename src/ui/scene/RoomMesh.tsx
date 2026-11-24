@@ -2,6 +2,7 @@ import type { Room } from '../../domain/types';
 import { isClick } from './clicks';
 
 const WALL = 4;
+const BASEBOARD = { height: 8, thickness: 1.5, color: '#f7f2ea' };
 
 /** Floor plus the back and left walls, in cm. Origin = floor center. */
 export function RoomMesh({ room, showGrid = true, onFloorClick }: { room: Room; showGrid?: boolean; onFloorClick?(): void }) {
@@ -17,7 +18,7 @@ export function RoomMesh({ room, showGrid = true, onFloorClick }: { room: Room; 
         }}
       >
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color="#d9cbb4" />
+        <meshStandardMaterial color="#cdb594" roughness={0.75} />
       </mesh>
       {showGrid && <gridHelper args={[Math.max(w, d), Math.round(Math.max(w, d) / 50), '#c7b79c', '#cfc1a8']} position-y={0.05} />}
       <mesh position={[0, h / 2, -d / 2 - WALL / 2]} receiveShadow>
@@ -27,6 +28,15 @@ export function RoomMesh({ room, showGrid = true, onFloorClick }: { room: Room; 
       <mesh position={[-w / 2 - WALL / 2, h / 2, 0]} receiveShadow>
         <boxGeometry args={[WALL, h, d]} />
         <meshStandardMaterial color="#e8dfd0" />
+      </mesh>
+      {/* Baseboards along the two walls. */}
+      <mesh position={[0, BASEBOARD.height / 2, -d / 2 + BASEBOARD.thickness / 2]} receiveShadow>
+        <boxGeometry args={[w, BASEBOARD.height, BASEBOARD.thickness]} />
+        <meshStandardMaterial color={BASEBOARD.color} />
+      </mesh>
+      <mesh position={[-w / 2 + BASEBOARD.thickness / 2, BASEBOARD.height / 2, 0]} receiveShadow>
+        <boxGeometry args={[BASEBOARD.thickness, BASEBOARD.height, d]} />
+        <meshStandardMaterial color={BASEBOARD.color} />
       </mesh>
     </group>
   );
