@@ -5,6 +5,16 @@ export const BOOK_DEFAULTS: Record<BookType, { thicknessCm: number; heightCm: nu
   buku: { thicknessCm: 3, heightCm: 21 },
 };
 
+export const THICKNESS_MIN_CM = 0.1;
+export const THICKNESS_MAX_CM = 30;
+
+/** Validate and round (0.1 cm) a user-given thickness; undefined → the type default. */
+function bookThickness(type: BookType, t: number | undefined): number {
+  if (t === undefined) return BOOK_DEFAULTS[type].thicknessCm;
+  if (!(t >= THICKNESS_MIN_CM && t <= THICKNESS_MAX_CM)) throw new Error('Tebal harus antara 0,1 dan 30 cm');
+  return Math.round(t * 10) / 10;
+}
+
 /** Deterministic color from a string (same name → same color). */
 export function seriesColor(name: string): string {
   let h = 2166136261;
@@ -34,12 +44,15 @@ export interface NewBookInput {
   author?: string;
   notes?: string;
   color?: string;
+  /** Spine thickness in cm; omitted → default for the type. */
+  thicknessCm?: number;
 }
 
 export function createBook(input: NewBookInput): Book {
   const title = input.title.trim();
   if (!title) throw new Error('Judul wajib diisi');
   const series = input.series?.trim() || undefined;
+  const thicknessCm = bookThickness(input.type, input.thicknessCm);
   return {
     id: crypto.randomUUID(),
     title,
@@ -50,6 +63,7 @@ export function createBook(input: NewBookInput): Book {
     notes: input.notes?.trim() || undefined,
     color: input.color ?? seriesColor(series ?? title),
     ...BOOK_DEFAULTS[input.type],
+    thicknessCm,
     placement: null,
     createdAt: Date.now(),
   };
@@ -63,6 +77,8 @@ export interface NewSeriesInput {
   from: number;
   to: number;
   author?: string;
+  /** Spine thickness in cm for every volume; omitted → default for the type. */
+  thicknessCm?: number;
 }
 
 export function createSeriesBooks(input: NewSeriesInput): Book[] {
@@ -72,13 +88,14 @@ export function createSeriesBooks(input: NewSeriesInput): Book[] {
   if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < 1) {
     throw new Error('Nomor volume harus bilangan bulat positif');
   }
+  bookThickness(input.type, input.thicknessCm);
   if (from > to) throw new Error('Volume awal tidak boleh lebih besar dari volume akhir');
   if (to - from + 1 > MAX_SERIES_BATCH) {
     throw new Error(`Maksimal ${MAX_SERIES_BATCH} volume sekali tambah`);
   }
   const books: Book[] = [];
   for (let v = from; v <= to; v++) {
-    books.push(createBook({ title: series, series, volume: v, type: input.type, author: input.author }));
+    books.push(createBook({ title: series, series, volume: v, type: input.type, author: input.author, thicknessCm: input.thicknessCm }));
   }
   return books;
 }
