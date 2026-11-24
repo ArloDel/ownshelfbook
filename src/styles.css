@@ -32,6 +32,11 @@ h3 {
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 600;
   margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 h2 small,
