@@ -2,7 +2,7 @@ import { createBook } from '../../src/domain/books';
 import { placeBooks } from '../../src/domain/placement';
 import { createShelf } from '../../src/domain/shelves';
 import { placedBookBoxes } from '../../src/ui/scene/BooksMesh';
-import { heightFactor, leanBook } from '../../src/ui/scene/bookLook';
+import { bandColor, heightFactor, leanBook, spineBands } from '../../src/ui/scene/bookLook';
 
 test('heightFactor is stable per book and never makes a book taller', () => {
   const ids = Array.from({ length: 50 }, (_, i) => `book-${i}`);
@@ -54,4 +54,21 @@ test('only the last book of a slot with free space leans', () => {
   const many = Array.from({ length: 80 }, (_, i) => createBook({ title: `W${i}`, type: 'komik' }));
   const full = placedBookBoxes(placeBooks(many, many.map((b) => b.id), { shelfId: shelf.id, row: 1, col: 0 }), [shelf]);
   expect(full.every((p) => p.tilt === 0)).toBe(true);
+});
+
+test('spineBands puts a thin strip near the top and bottom of the spine', () => {
+  const bands = spineBands([1.5, 18, 13]);
+  expect(bands).toHaveLength(2);
+  for (const b of bands) {
+    expect(b.size[0]).toBeCloseTo(1.5);
+    expect(b.size[1]).toBeGreaterThan(0.2);
+    expect(Math.abs(b.position[1]) + b.size[1] / 2).toBeLessThan(9); // inside the book height
+    expect(b.position[2]).toBeGreaterThan(13 / 2); // just in front of the spine
+  }
+  expect(bands[0].position[1]).toBeCloseTo(-bands[1].position[1]);
+});
+
+test('bandColor is a darker shade of the book colour', () => {
+  expect(bandColor('#ffffff')).toBe('#9e9e9e');
+  expect(bandColor('#3a6ea5')).toBe('#244466');
 });
