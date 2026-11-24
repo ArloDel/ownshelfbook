@@ -499,6 +499,15 @@ input[type='color'] {
   margin-top: var(--space-1h);
   cursor: pointer;
 }
+.bulk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-4);
+}
 .checked-bar {
   background: var(--paper);
   border-radius: var(--radius-sm);

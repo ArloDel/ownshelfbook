@@ -30,6 +30,7 @@ export function CollectionPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [panel, setPanel] = useState<Panel>(null);
   const [toDelete, setToDelete] = useState<string[] | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {
     const filtered = books.filter(
@@ -39,6 +40,20 @@ export function CollectionPage() {
     );
     return groupBooks(filtered);
   }, [books, typeFilter, statusFilter]);
+
+  // Only books on screen count as selected: a filter never hides a book that is about to be deleted.
+  const shownIds = useMemo(() => groups.flatMap(([, list]) => list.map((b) => b.id)), [groups]);
+  const selected = shownIds.filter((id) => picked.has(id));
+
+  const toggle = (ids: string[], on: boolean) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
 
   return (
     <div className="collection">
@@ -77,35 +92,71 @@ export function CollectionPage() {
         </p>
       )}
 
-      {groups.map(([name, list]) => (
-        <section key={name} aria-label={name} className="group">
-          <header className="row">
-            <h3>{name}</h3>
-            <small>{list.length} buku</small>
-          </header>
-          <ul>
-            {list.map((b) => (
-              <li key={b.id} className="book-row">
-                <span className="swatch" style={{ background: b.color }} />
-                <span className="grow">{bookLabel(b)}</span>
-                <span className="tag">{b.type === 'komik' ? 'Komik' : 'Buku'}</span>
-                <span className={b.placement ? 'status placed' : 'status'}>{placementLabel(b, shelves)}</span>
-                <button className="ghost" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
-                  Edit
-                </button>
-                <button className="ghost" onClick={() => setToDelete([b.id])} aria-label={`Hapus ${bookLabel(b)}`}>
-                  Hapus
-                </button>
-              </li>
-            ))}
-          </ul>
+      {selected.length > 0 && (
+        <section aria-label="Buku dipilih" className="row bulk-bar">
+          <span className="grow">{selected.length} dipilih</span>
+          {selected.length < shownIds.length && (
+            <button className="ghost" onClick={() => toggle(shownIds, true)}>
+              Pilih semua yang tampil
+            </button>
+          )}
+          <button className="ghost" onClick={() => setPicked(new Set())}>
+            Batal pilih
+          </button>
+          <button className="danger" onClick={() => setToDelete(selected)}>
+            Hapus {selected.length} buku
+          </button>
         </section>
-      ))}
+      )}
+
+      {groups.map(([name, list]) => {
+        const ids = list.map((b) => b.id);
+        const count = ids.filter((id) => picked.has(id)).length;
+        return (
+          <section key={name} aria-label={name} className="group">
+            <header className="row">
+              <input
+                type="checkbox"
+                aria-label={`Pilih semua ${name}`}
+                checked={count === ids.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = count > 0 && count < ids.length;
+                }}
+                onChange={(e) => toggle(ids, e.target.checked)}
+              />
+              <h3>{name}</h3>
+              <small>{list.length} buku</small>
+            </header>
+            <ul>
+              {list.map((b) => (
+                <li key={b.id} className="book-row">
+                  <input
+                    type="checkbox"
+                    aria-label={`Pilih ${bookLabel(b)}`}
+                    checked={picked.has(b.id)}
+                    onChange={(e) => toggle([b.id], e.target.checked)}
+                  />
+                  <span className="swatch" style={{ background: b.color }} />
+                  <span className="grow">{bookLabel(b)}</span>
+                  <span className="tag">{b.type === 'komik' ? 'Komik' : 'Buku'}</span>
+                  <span className={b.placement ? 'status placed' : 'status'}>{placementLabel(b, shelves)}</span>
+                  <button className="ghost" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
+                    Edit
+                  </button>
+                  <button className="ghost" onClick={() => setToDelete([b.id])} aria-label={`Hapus ${bookLabel(b)}`}>
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
 
       <ConfirmDialog
         open={toDelete !== null}
         title="Hapus buku"
-        message={`Hapus ${toDelete?.length ?? 0} buku?`}
+        message={`Hapus ${toDelete?.length ?? 0} buku? Buku yang sudah ditata juga hilang dari rak.`}
         confirmLabel="Hapus"
         danger
         onCancel={() => setToDelete(null)}
@@ -113,6 +164,7 @@ export function CollectionPage() {
           const ids = toDelete ?? [];
           setToDelete(null);
           await deleteBooks(ids);
+          toggle(ids, false);
         }}
       />
     </div>
