@@ -63,3 +63,33 @@ export function leanBook(b: Upright, right: number, top: number): { cx: number; 
   const px = b.left + b.height * s;
   return { cx: px + (b.width / 2) * c - (b.height / 2) * s, cy: b.bottom + (b.width / 2) * s + (b.height / 2) * c, tilt };
 }
+
+const BAND_HEIGHT = 0.5;
+const BAND_INSET = 0.7;
+
+export interface Band {
+  position: [number, number, number];
+  size: [number, number, number];
+}
+
+/** Two thin strips across the spine, near its top and bottom, in book-local cm. */
+export function spineBands([w, h, d]: [number, number, number]): Band[] {
+  const y = h / 2 - BAND_INSET - BAND_HEIGHT / 2;
+  const z = d / 2 + 0.03;
+  const size: [number, number, number] = [w, BAND_HEIGHT, 0.04];
+  return [
+    { position: [0, -y, z], size },
+    { position: [0, y, z], size },
+  ];
+}
+
+/** Darker shade of a #rrggbb colour for the spine bands. */
+export function bandColor(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return (
+    '#' +
+    [16, 8, 0]
+      .map((shift) => Math.round(((n >> shift) & 255) * 0.62).toString(16).padStart(2, '0'))
+      .join('')
+  );
+}
