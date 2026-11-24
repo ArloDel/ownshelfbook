@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { booksInSlot, slotUsage } from '../../domain/placement';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
@@ -11,6 +12,7 @@ export function SlotPanel() {
   const books = useDataStore((s) => s.books);
   const shelf = useDataStore((s) => s.shelves.find((x) => x.id === slot?.shelfId));
   const { placeBooks, unplaceBooks, moveInSlot } = useDataStore.getState();
+  const [placing, setPlacing] = useState(false);
 
   const valid = slot && shelf && slot.row < shelf.rowHeightsCm.length && slot.col < shelf.colWidthsCm[slot.row].length;
   if (!valid) {
@@ -42,14 +44,18 @@ export function SlotPanel() {
       <div className="row">
         <button
           className="primary grow"
-          disabled={checked.length === 0}
+          disabled={checked.length === 0 || placing}
           onClick={async () => {
-            const ids = checked;
-            clearChecked();
-            await placeBooks(ids, slot);
+            setPlacing(true);
+            try {
+              await placeBooks(checked, slot);
+              clearChecked();
+            } finally {
+              setPlacing(false);
+            }
           }}
         >
-          Taruh di slot ini ({checked.length})
+          {placing ? 'Menaruh…' : `Taruh di slot ini (${checked.length})`}
         </button>
         <button onClick={() => focusShelf(shelf.id)}>Fokus ke rak</button>
       </div>
