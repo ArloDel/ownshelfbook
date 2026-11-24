@@ -19,3 +19,47 @@ function hash(s: string): number {
 export function heightFactor(id: string): number {
   return 1 - ((hash(id) % 1000) / 1000) * HEIGHT_JITTER;
 }
+
+const MAX_LEAN = (12 * Math.PI) / 180;
+/** Below this much free space (cm) the book just stands upright. */
+const MIN_FREE = 0.5;
+/** Keep a hair of air between the leaning book and the slot edge. */
+const LEAN_GAP = 0.2;
+
+export interface Upright {
+  left: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Lean a book to the left: its top-left corner rests on the neighbour (or slot wall)
+ * at `left`, its bottom corner slides right. Returns the box centre and the tilt
+ * (radians, counter-clockwise seen from the front), as steep as fits in the slot.
+ */
+export function leanBook(b: Upright, right: number, top: number): { cx: number; cy: number; tilt: number } {
+  const upright = { cx: b.left + b.width / 2, cy: b.bottom + b.height / 2, tilt: 0 };
+  const room = right - b.left - LEAN_GAP;
+  if (right - b.left - b.width < MIN_FREE) return upright;
+  const fits = (t: number) =>
+    b.height * Math.sin(t) + b.width * Math.cos(t) <= room && b.height * Math.cos(t) + b.width * Math.sin(t) <= top - b.bottom;
+  let tilt = 0;
+  if (fits(MAX_LEAN)) tilt = MAX_LEAN;
+  else {
+    let lo = 0;
+    let hi = MAX_LEAN;
+    for (let i = 0; i < 30; i++) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid)) lo = mid;
+      else hi = mid;
+    }
+    tilt = lo;
+  }
+  if (tilt < 0.005) return upright;
+  const c = Math.cos(tilt);
+  const s = Math.sin(tilt);
+  // Bottom-left corner sits on the board, h·sin(tilt) right of `left`.
+  const px = b.left + b.height * s;
+  return { cx: px + (b.width / 2) * c - (b.height / 2) * s, cy: b.bottom + (b.width / 2) * s + (b.height / 2) * c, tilt };
+}

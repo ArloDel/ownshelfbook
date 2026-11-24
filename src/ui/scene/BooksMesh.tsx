@@ -6,7 +6,7 @@ import { booksInSlot } from '../../domain/placement';
 import { columnCount, slotRect } from '../../domain/shelves';
 import type { Book, Shelf } from '../../domain/types';
 import { bookLabel } from '../common/labels';
-import { heightFactor } from './bookLook';
+import { heightFactor, leanBook } from './bookLook';
 import { layoutBooksInSlot } from './layout';
 
 const BOOK_DEPTH = { komik: 13, buku: 15 } as const;
@@ -18,6 +18,8 @@ export interface PlacedBook {
   /** Book center in shelf-local cm. */
   local: [number, number, number];
   size: [number, number, number];
+  /** Lean around the shelf's z axis (radians, counter-clockwise seen from the front). */
+  tilt: number;
 }
 
 /** Every visible placed book with its shelf-local box. */
@@ -30,18 +32,28 @@ export function placedBookBoxes(books: Book[], shelves: Shelf[]): PlacedBook[] {
         const inSlot = booksInSlot(books, { shelfId: shelf.id, row: r, col: c });
         if (!inSlot.length) continue;
         const rect = slotRect(shelf, r, c);
-        for (const box of layoutBooksInSlot(inSlot, rect)) {
-          if (!box.visible) continue;
+        const boxes = layoutBooksInSlot(inSlot, rect);
+        const shown = boxes.filter((b) => b.visible);
+        // A slot with overflow is full: nothing can lean.
+        const leanLast = shown.length === boxes.length;
+        shown.forEach((box, i) => {
           const book = byId.get(box.id)!;
           const depth = Math.max(2, Math.min(BOOK_DEPTH[book.type], shelf.depthCm - 2));
           const height = box.height * heightFactor(book.id);
+          const width = box.width * 0.96;
+          const upright = { left: box.x - width / 2, bottom: box.y, width, height };
+          const pose =
+            leanLast && i === shown.length - 1
+              ? leanBook(upright, rect.x + rect.width, rect.y + rect.height)
+              : { cx: box.x, cy: box.y + height / 2, tilt: 0 };
           out.push({
             book,
             shelf,
-            local: [box.x, box.y + height / 2, shelf.depthCm / 2 - depth / 2 - 1],
-            size: [box.width * 0.96, height, depth],
+            local: [pose.cx, pose.cy, shelf.depthCm / 2 - depth / 2 - 1],
+            size: [width, height, depth],
+            tilt: pose.tilt,
           });
-        }
+        });
       }
     }
   }
@@ -71,7 +83,7 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
     placed.forEach((p, i) => {
       shelfWorld(p.shelf, shelfMatrix);
       dummy.position.set(...p.local);
-      dummy.rotation.set(0, 0, 0);
+      dummy.rotation.set(0, 0, p.tilt);
       dummy.scale.set(...p.size);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix.premultiply(shelfMatrix));
@@ -126,7 +138,7 @@ function SpineLabels({ placed, shelves }: { placed: PlacedBook[]; shelves: Shelf
           >
             <Text
               position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.05]}
-              rotation-z={-Math.PI / 2}
+              rotation-z={p.tilt - Math.PI / 2}
               fontSize={Math.min(p.size[0] * 0.55, 1.4)}
               maxWidth={p.size[1] - 2}
               color={readableOn(p.book.color)}
