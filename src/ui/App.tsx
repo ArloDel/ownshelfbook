@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requestPersistentStorage } from '../persistence/repo';
 import { useDataStore } from '../store/dataStore';
 import { useUiStore, type Page } from '../store/uiStore';
@@ -39,19 +40,15 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <h1>OwnShelfBook</h1>
-        <nav role="tablist" aria-label="Halaman">
-          {TABS.map((t) => (
-            <button
-              key={t.page}
-              role="tab"
-              aria-selected={page === t.page}
-              className={page === t.page ? 'tab active' : 'tab'}
-              onClick={() => setPage(t.page)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <Tabs value={page} onValueChange={(v) => setPage(v as Page)} className="self-stretch">
+          <TabsList variant="line" aria-label="Halaman" className="h-full! gap-4 p-0">
+            {TABS.map((t) => (
+              <TabsTrigger key={t.page} value={t.page} className="flex-none px-1 after:bottom-0! data-active:after:bg-primary">
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
         <div className="topbar-search">
           <SearchBox />
         </div>

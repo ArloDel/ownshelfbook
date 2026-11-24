@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { backupFileName } from '../domain/backup';
 import { useDataStore } from '../store/dataStore';
 import { ConfirmDialog } from './common/ConfirmDialog';
@@ -42,12 +43,18 @@ export function BackupButtons() {
 
   return (
     <div className="row backup">
-      <button onClick={exportFile} title="Unduh semua data sebagai file JSON">
+      <Button variant="ghost" className="font-normal text-muted-foreground" onClick={exportFile} title="Unduh semua data sebagai file JSON">
         Ekspor
-      </button>
-      <button onClick={() => fileRef.current?.click()} disabled={importing} title="Pulihkan data dari file cadangan">
+      </Button>
+      <Button
+        variant="ghost"
+        className="font-normal text-muted-foreground"
+        onClick={() => fileRef.current?.click()}
+        disabled={importing}
+        title="Pulihkan data dari file cadangan"
+      >
         {importing ? 'Mengimpor…' : 'Impor'}
-      </button>
+      </Button>
       <input
         ref={fileRef}
         type="file"
