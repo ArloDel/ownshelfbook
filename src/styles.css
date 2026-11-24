@@ -616,7 +616,10 @@ input[type='color'] {
 
 /* Narrow screens: keep the room toolbar on one line. */
 @media (max-width: 1100px) {
+  .room-toolbar {
+    flex-wrap: wrap;
+  }
   .room-toolbar .hint {
-    visibility: hidden;
+    display: none;
   }
 }
