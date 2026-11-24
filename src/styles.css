@@ -862,12 +862,15 @@ button.icon {
   padding-bottom: var(--space-2);
 }
 
-/* Narrow screens: keep the room toolbar on one line. */
+/* Narrower screens: slimmer sheets, the caption gives way to the canvas. */
 @media (max-width: 1100px) {
-  .room-toolbar {
-    flex-wrap: wrap;
+  .sheet-left {
+    width: 220px;
   }
-  .room-toolbar .hint {
+  .sheet-right {
+    width: 280px;
+  }
+  .caption {
     display: none;
   }
 }
@@ -879,7 +882,7 @@ button.icon {
   }
 }
 
-/* Phones: one column. 3D view on top, panels below, the page scrolls. */
+/* Phones: one column. 3D view on top, toolbar under it, then the sheets; the page scrolls. */
 @media (max-width: 700px) {
   .app {
     height: auto;
@@ -887,7 +890,12 @@ button.icon {
   }
   .topbar {
     flex-wrap: wrap;
-    gap: var(--space-2);
+    height: auto;
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-4);
+  }
+  .topbar nav {
+    height: 40px;
   }
   .topbar-search {
     order: 1;
@@ -897,34 +905,57 @@ button.icon {
     width: 100%;
   }
   .room {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'center'
-      'right'
-      'left';
+    display: flex;
+    flex-direction: column;
     height: auto;
+    overflow: visible;
+    background: var(--bg);
   }
-  .room-center {
-    grid-area: center;
-    height: 60vh;
+  .canvas-wrap {
+    position: relative;
+    height: 55vh;
+    background: var(--canvas);
   }
-  .room-right {
-    grid-area: right;
-    border-left: 0;
-    border-top: 1px solid var(--line);
+  .room-dock {
+    order: 1;
+    position: static;
+    transform: none;
+    max-width: none;
+    padding: var(--space-3) var(--space-4) 0;
   }
-  .room-left {
-    grid-area: left;
-    border-right: 0;
-    border-top: 1px solid var(--line);
+  .room-toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sheet,
+  .sheet-chip {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: var(--space-3) var(--space-4) 0;
+  }
+  .sheet-chip {
+    order: 4;
+    align-self: flex-start;
+  }
+  .sheet-right {
+    order: 3;
+  }
+  .sheet-left {
+    order: 4;
+    margin-bottom: var(--space-6);
   }
   .page-collection {
-    padding: var(--space-3) var(--space-3) var(--space-8);
+    padding: var(--space-3) var(--space-4) var(--space-8);
   }
   .book-row {
     flex-wrap: wrap;
+    padding: var(--space-1) var(--space-2);
   }
   .status {
-    min-width: 0;
+    width: auto;
+  }
+  .form .row {
+    flex-wrap: wrap;
   }
 }
