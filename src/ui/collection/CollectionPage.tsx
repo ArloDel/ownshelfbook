@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { NativeSelect } from '@/components/ui/native-select';
 import type { Book, BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -61,25 +64,25 @@ export function CollectionPage() {
         <h2>{books.length} buku</h2>
         <label className="field inline">
           <span>Jenis</span>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
+          <NativeSelect size="sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
             <option value="semua">Semua</option>
             <option value="komik">Komik</option>
             <option value="buku">Buku</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="field inline">
           <span>Status</span>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
+          <NativeSelect size="sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
             <option value="semua">Semua</option>
             <option value="ditata">Ditata</option>
             <option value="belum">Belum ditata</option>
-          </select>
+          </NativeSelect>
         </label>
         <span className="spacer" />
-        <button onClick={() => setPanel({ kind: 'add' })}>Tambah buku</button>
-        <button className="primary" onClick={() => setPanel({ kind: 'series' })}>
-          Tambah berseri
-        </button>
+        <Button variant="ghost" onClick={() => setPanel({ kind: 'add' })}>
+          Tambah buku
+        </Button>
+        <Button onClick={() => setPanel({ kind: 'series' })}>Tambah berseri</Button>
       </div>
 
       {panel?.kind === 'add' && <BookForm onDone={() => setPanel(null)} />}
@@ -96,16 +99,16 @@ export function CollectionPage() {
         <section aria-label="Buku dipilih" className="row bulk-bar">
           <span className="grow">{selected.length} dipilih</span>
           {selected.length < shownIds.length && (
-            <button className="ghost" onClick={() => toggle(shownIds, true)}>
+            <Button variant="ghost" size="sm" onClick={() => toggle(shownIds, true)}>
               Pilih semua yang tampil
-            </button>
+            </Button>
           )}
-          <button className="ghost" onClick={() => setPicked(new Set())}>
+          <Button variant="ghost" size="sm" onClick={() => setPicked(new Set())}>
             Batal pilih
-          </button>
-          <button className="danger" onClick={() => setToDelete(selected)}>
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => setToDelete(selected)}>
             Hapus {selected.length} buku
-          </button>
+          </Button>
         </section>
       )}
 
@@ -115,14 +118,10 @@ export function CollectionPage() {
         return (
           <section key={name} aria-label={name} className="group">
             <header className="row">
-              <input
-                type="checkbox"
+              <Checkbox
                 aria-label={`Pilih semua ${name}`}
-                checked={count === ids.length}
-                ref={(el) => {
-                  if (el) el.indeterminate = count > 0 && count < ids.length;
-                }}
-                onChange={(e) => toggle(ids, e.target.checked)}
+                checked={count === ids.length ? true : count > 0 ? 'indeterminate' : false}
+                onCheckedChange={(c) => toggle(ids, c === true)}
               />
               <h3>{name}</h3>
               <small>{list.length} buku</small>
@@ -130,23 +129,28 @@ export function CollectionPage() {
             <ul>
               {list.map((b) => (
                 <li key={b.id} className="book-row">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label={`Pilih ${bookLabel(b)}`}
                     checked={picked.has(b.id)}
-                    onChange={(e) => toggle([b.id], e.target.checked)}
+                    onCheckedChange={(c) => toggle([b.id], c === true)}
                   />
                   <span className="swatch" style={{ background: b.color }} />
                   <span className="grow">{bookLabel(b)}</span>
                   <span className="tag">{b.type === 'komik' ? 'Komik' : 'Buku'}</span>
                   <span className={b.placement ? 'status placed' : 'status'}>{placementLabel(b, shelves)}</span>
                   <span className="row-actions">
-                    <button className="ghost" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
+                    <Button variant="ghost" size="sm" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
                       Edit
-                    </button>
-                    <button className="ghost danger" onClick={() => setToDelete([b.id])} aria-label={`Hapus ${bookLabel(b)}`}>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setToDelete([b.id])}
+                      aria-label={`Hapus ${bookLabel(b)}`}
+                    >
                       Hapus
-                    </button>
+                    </Button>
                   </span>
                 </li>
               ))}

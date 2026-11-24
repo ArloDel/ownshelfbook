@@ -413,7 +413,7 @@
     transition: background-color 120ms ease-out;
   }
   .book-row:hover,
-  .book-row:has(input:checked) {
+  .book-row:has([data-state='checked']) {
     background: var(--hover);
   }
   /* Row actions show on hover or keyboard focus; always on touch screens. */

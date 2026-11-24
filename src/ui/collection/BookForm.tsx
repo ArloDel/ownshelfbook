@@ -1,3 +1,7 @@
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
 import { useState, type FormEvent } from 'react';
 import type { Book, BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
@@ -61,32 +65,32 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
       <h3>{name}</h3>
       <label className="field">
         <span>Judul</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
       </label>
       <div className="row">
         <label className="field grow">
           <span>Seri (opsional)</span>
-          <input value={series} onChange={(e) => setSeries(e.target.value)} />
+          <Input value={series} onChange={(e) => setSeries(e.target.value)} />
         </label>
         <label className="field">
           <span>Volume</span>
-          <input type="number" min={0} value={volume} onChange={(e) => setVolume(e.target.value)} />
+          <Input type="number" min={0} value={volume} onChange={(e) => setVolume(e.target.value)} />
         </label>
       </div>
       <label className="field">
         <span>Jenis</span>
-        <select value={type} onChange={(e) => setType(e.target.value as BookType)}>
+        <NativeSelect className="w-full" value={type} onChange={(e) => setType(e.target.value as BookType)}>
           <option value="komik">Komik</option>
           <option value="buku">Buku</option>
-        </select>
+        </NativeSelect>
       </label>
       <label className="field">
         <span>Penulis (opsional)</span>
-        <input value={author} onChange={(e) => setAuthor(e.target.value)} />
+        <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
       </label>
       <label className="field">
         <span>Catatan (opsional)</span>
-        <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       <div className="row">
         <ThicknessField value={thickness.text} onChange={thickness.change} />
@@ -99,7 +103,7 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
         {editing && (
           <label className="field">
             <span>Tinggi (cm)</span>
-            <input type="number" step={0.5} min={1} value={height} onChange={(e) => setHeight(e.target.value)} />
+            <Input type="number" step={0.5} min={1} value={height} onChange={(e) => setHeight(e.target.value)} />
           </label>
         )}
       </div>
@@ -109,12 +113,12 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
         </p>
       )}
       <div className="row end">
-        <button type="button" onClick={onDone}>
+        <Button type="button" variant="ghost" onClick={onDone}>
           Batal
-        </button>
-        <button type="submit" className="primary" disabled={saving}>
+        </Button>
+        <Button type="submit" disabled={saving}>
           {saving ? 'Menyimpan…' : 'Simpan'}
-        </button>
+        </Button>
       </div>
     </form>
   );

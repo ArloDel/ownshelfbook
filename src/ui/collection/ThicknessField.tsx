@@ -1,3 +1,4 @@
+import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { BOOK_DEFAULTS } from '../../domain/books';
 import type { BookType } from '../../domain/types';
@@ -28,7 +29,7 @@ export function ThicknessField({ value, onChange }: { value: string; onChange(v:
   return (
     <label className="field">
       <span>Tebal (cm)</span>
-      <input inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} />
+      <Input inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }
