@@ -702,6 +702,16 @@ button.icon {
 .slot-list li {
   padding: var(--space-0) 0;
   flex-wrap: nowrap;
+  gap: var(--space-1);
+}
+.slot-list li .grow {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slot-list button.ghost {
+  padding: 0 var(--space-1h);
 }
 
 /* Search and backup */
