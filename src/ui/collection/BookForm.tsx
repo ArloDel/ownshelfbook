@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { Book, BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
+import { ThicknessField, useThickness } from './ThicknessField';
 
 export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
   const addBook = useDataStore((s) => s.addBook);
@@ -13,7 +14,7 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
   const [author, setAuthor] = useState(book?.author ?? '');
   const [notes, setNotes] = useState(book?.notes ?? '');
   const [color, setColor] = useState(book?.color ?? '#8a6d4b');
-  const [thickness, setThickness] = useState(book?.thicknessCm.toString() ?? '');
+  const thickness = useThickness(type, book?.thicknessCm);
   const [height, setHeight] = useState(book?.heightCm.toString() ?? '');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -29,10 +30,10 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
     setSaving(true);
     try {
       if (!editing) {
-        await addBook({ title, series, volume: vol, type, author, notes });
+        await addBook({ title, series, volume: vol, type, author, notes, thicknessCm: thickness.cm() });
       } else {
         if (!title.trim()) throw new Error('Judul wajib diisi');
-        const t = Number(thickness);
+        const t = thickness.cm();
         const h = Number(height);
         if (!(t > 0) || !(h > 0)) throw new Error('Tebal dan tinggi harus lebih dari 0');
         await updateBook(book.id, {
@@ -87,22 +88,21 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
         <span>Catatan (opsional)</span>
         <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
-      {editing && (
-        <div className="row">
+      <div className="row">
+        <ThicknessField value={thickness.text} onChange={thickness.change} />
+        {editing && (
           <label className="field">
             <span>Warna punggung</span>
             <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
           </label>
-          <label className="field">
-            <span>Tebal (cm)</span>
-            <input type="number" step={0.1} min={0.1} value={thickness} onChange={(e) => setThickness(e.target.value)} />
-          </label>
+        )}
+        {editing && (
           <label className="field">
             <span>Tinggi (cm)</span>
             <input type="number" step={0.5} min={1} value={height} onChange={(e) => setHeight(e.target.value)} />
           </label>
-        </div>
-      )}
+        )}
+      </div>
       {error && (
         <p role="alert" className="error">
           {error}
