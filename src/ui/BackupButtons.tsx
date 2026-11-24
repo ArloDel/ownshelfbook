@@ -6,6 +6,7 @@ import { ConfirmDialog } from './common/ConfirmDialog';
 export function BackupButtons() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
 
   function exportFile() {
@@ -28,11 +29,14 @@ export function BackupButtons() {
   async function confirmImport() {
     const text = pendingText ?? '';
     setPendingText(null);
+    setImporting(true);
     try {
       await useDataStore.getState().importData(text);
       setMessage({ kind: 'ok', text: 'Data berhasil dipulihkan dari cadangan.' });
     } catch (err) {
       setMessage({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -41,8 +45,8 @@ export function BackupButtons() {
       <button onClick={exportFile} title="Unduh semua data sebagai file JSON">
         Ekspor
       </button>
-      <button onClick={() => fileRef.current?.click()} title="Pulihkan data dari file cadangan">
-        Impor
+      <button onClick={() => fileRef.current?.click()} disabled={importing} title="Pulihkan data dari file cadangan">
+        {importing ? 'Mengimpor…' : 'Impor'}
       </button>
       <input
         ref={fileRef}
