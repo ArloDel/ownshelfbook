@@ -239,6 +239,14 @@ input[type='color'] {
 .form h3 {
   font-size: var(--text-lg);
 }
+.form .row {
+  flex-wrap: nowrap;
+  gap: var(--space-3);
+}
+.form .row > .field {
+  flex: 1;
+  min-width: 0;
+}
 
 .error {
   color: var(--danger);
