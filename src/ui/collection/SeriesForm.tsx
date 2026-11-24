@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
+import { ThicknessField, useThickness } from './ThicknessField';
 
 export function SeriesForm({ onDone }: { onDone(): void }) {
   const addSeries = useDataStore((s) => s.addSeries);
@@ -9,6 +10,7 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
   const [from, setFrom] = useState('1');
   const [to, setTo] = useState('1');
   const [author, setAuthor] = useState('');
+  const thickness = useThickness(type);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -16,7 +18,7 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await addSeries({ series, type, from: Number(from), to: Number(to), author });
+      await addSeries({ series, type, from: Number(from), to: Number(to), author, thicknessCm: thickness.cm() });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -48,6 +50,7 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
           <span>Sampai volume</span>
           <input type="number" min={1} value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
+        <ThicknessField value={thickness.text} onChange={thickness.change} />
       </div>
       <label className="field">
         <span>Penulis (opsional)</span>
