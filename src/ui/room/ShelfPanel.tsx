@@ -75,9 +75,10 @@ export function ShelfPanel() {
 
   return (
     <div className="shelf-panel" key={`${shelf.id}-${resetKey}`}>
-      <label className="field">
+      <label className="field shelf-name">
         <span>Nama rak</span>
         <input
+          aria-label="Nama rak"
           defaultValue={shelf.name}
           onBlur={(e) => e.target.value.trim() && void updateShelf(shelf.id, { name: e.target.value.trim() })}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
@@ -111,13 +112,13 @@ export function ShelfPanel() {
           suffix="cm"
           onChange={(v) => reshape(setInnerWidth(shelf, v - 2 * board))}
         />
-        <NumberField label="Jumlah tingkat" value={rows} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setRowCount(shelf, v))} />
+        <NumberField label="Jumlah tingkat" shortLabel="Tingkat" value={rows} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setRowCount(shelf, v))} />
       </div>
       <div className="row">
         <NumberField label="Kedalaman" value={shelf.depthCm} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => void updateShelf(shelf.id, { depthCm: v })} />
         <label className="field">
-          <span>Warna kayu</span>
-          <input type="color" value={shelf.color} onChange={(e) => void updateShelf(shelf.id, { color: e.target.value })} />
+          <span>Kayu</span>
+          <input type="color" aria-label="Warna kayu" value={shelf.color} onChange={(e) => void updateShelf(shelf.id, { color: e.target.value })} />
         </label>
       </div>
 
@@ -130,8 +131,8 @@ export function ShelfPanel() {
           <fieldset key={r} className="tier" aria-label={`Tingkat ${n}`}>
             <legend>Tingkat {n}</legend>
             <div className="row">
-              <NumberField label={`Tinggi tingkat ${n}`} value={shelf.rowHeightsCm[r]} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => setRowHeight(r, v)} />
-              <NumberField label={`Jumlah kolom tingkat ${n}`} value={cols.length} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setColumnCount(shelf, r, v))} />
+              <NumberField label={`Tinggi tingkat ${n}`} shortLabel="Tinggi" value={shelf.rowHeightsCm[r]} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => setRowHeight(r, v)} />
+              <NumberField label={`Jumlah kolom tingkat ${n}`} shortLabel="Kolom" value={cols.length} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setColumnCount(shelf, r, v))} />
             </div>
             {cols.length > 1 && (
               <div className="dims">
@@ -139,6 +140,7 @@ export function ShelfPanel() {
                   <NumberField
                     key={c}
                     label={`Tingkat ${n} kolom ${c + 1}`}
+                    shortLabel={`Kolom ${c + 1}`}
                     value={w}
                     min={DIM_MIN_CM}
                     max={DIM_MAX_CM}
