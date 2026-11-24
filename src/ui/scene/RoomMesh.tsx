@@ -4,7 +4,7 @@ import { isClick } from './clicks';
 const WALL = 4;
 
 /** Floor plus the back and left walls, in cm. Origin = floor center. */
-export function RoomMesh({ room, onFloorClick }: { room: Room; onFloorClick?(): void }) {
+export function RoomMesh({ room, showGrid = true, onFloorClick }: { room: Room; showGrid?: boolean; onFloorClick?(): void }) {
   const { widthCm: w, depthCm: d, heightCm: h } = room;
   return (
     <group>
@@ -19,7 +19,7 @@ export function RoomMesh({ room, onFloorClick }: { room: Room; onFloorClick?(): 
         <planeGeometry args={[w, d]} />
         <meshStandardMaterial color="#d9cbb4" />
       </mesh>
-      <gridHelper args={[Math.max(w, d), Math.round(Math.max(w, d) / 50), '#c7b79c', '#cfc1a8']} position-y={0.05} />
+      {showGrid && <gridHelper args={[Math.max(w, d), Math.round(Math.max(w, d) / 50), '#c7b79c', '#cfc1a8']} position-y={0.05} />}
       <mesh position={[0, h / 2, -d / 2 - WALL / 2]} receiveShadow>
         <boxGeometry args={[w + WALL * 2, h, WALL]} />
         <meshStandardMaterial color="#efe7da" />

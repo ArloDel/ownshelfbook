@@ -92,7 +92,7 @@ function SceneContent() {
     <>
       <Lights />
       <group scale={0.01}>
-        <RoomMesh room={room} onFloorClick={() => mode === 'tata' && selectShelf(null)} />
+        <RoomMesh room={room} showGrid={mode === 'tata'} onFloorClick={() => mode === 'tata' && selectShelf(null)} />
         {shown.map((s) => (
           <ShelfMesh
             key={s.id}
