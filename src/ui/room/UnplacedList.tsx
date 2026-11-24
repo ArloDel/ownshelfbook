@@ -4,7 +4,7 @@ import { useUiStore } from '../../store/uiStore';
 import { groupBooks } from '../collection/CollectionPage';
 import { bookLabel } from '../common/labels';
 
-export function UnplacedList() {
+export function UnplacedList({ onCollapse }: { onCollapse?(): void } = {}) {
   const books = useDataStore((s) => s.books);
   const checked = useUiStore((s) => s.checkedBookIds);
   const toggleChecked = useUiStore((s) => s.toggleChecked);
@@ -30,7 +30,12 @@ export function UnplacedList() {
     <section aria-label="Belum ditata" className="unplaced">
       <header className="row">
         <h3 className="grow">Belum ditata</h3>
-        <small>{unplaced.length}</small>
+        <small className="count">{unplaced.length}</small>
+        {onCollapse && (
+          <button className="ghost icon" aria-label="Sembunyikan Belum ditata" title="Sembunyikan" onClick={onCollapse}>
+            –
+          </button>
+        )}
       </header>
       <input
         type="search"
