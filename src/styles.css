@@ -316,9 +316,9 @@ input[type='color'] {
   padding: var(--space-6) var(--space-6) var(--space-12);
 }
 
-/* Collection */
+/* Collection: one quiet column, rows without borders. */
 .collection {
-  max-width: 60rem;
+  max-width: 880px;
   margin: 0 auto;
 }
 .toolbar {
@@ -326,13 +326,26 @@ input[type='color'] {
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
-.group {
   margin-bottom: var(--space-6);
 }
+.toolbar h2 {
+  margin-right: var(--space-2);
+}
+.toolbar select {
+  height: 28px;
+  font-size: var(--text-sm);
+}
+.collection .card {
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+.group {
+  margin-bottom: var(--space-8);
+}
 .group header {
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-2);
+  flex-wrap: nowrap;
 }
 .group h3 {
   font-size: var(--text-lg);
@@ -345,31 +358,54 @@ input[type='color'] {
 .book-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-1);
-  border-radius: var(--radius-sm);
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  transition: background-color 120ms ease-out;
 }
-.book-row:hover {
-  background: var(--panel);
+.book-row:hover,
+.book-row:has(input:checked) {
+  background: var(--hover);
+}
+/* Row actions show on hover or keyboard focus; always on touch screens. */
+.row-actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.book-row:hover .row-actions,
+.book-row:focus-within .row-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+button.ghost.danger {
+  color: var(--danger);
 }
 .swatch {
-  width: 0.5rem;
-  height: 1.4rem;
+  width: 6px;
+  height: 20px;
   border-radius: var(--radius-xs);
   flex: none;
 }
 .tag {
+  width: 3.5rem;
   font-size: var(--text-xs);
   color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  padding: 0 var(--space-2);
 }
 .status {
   font-size: var(--text-xs);
   color: var(--muted);
-  min-width: 8rem;
+  width: 8rem;
   text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .status.placed {
   color: var(--accent);
@@ -670,10 +706,14 @@ button.icon {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--paper);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
-  margin-bottom: var(--space-4);
+  background: var(--hover);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  /* page background behind the sticky bar, so rows never show through its gaps */
+  box-shadow: 0 -8px 0 var(--bg);
 }
 .checked-bar {
   background: var(--hover);

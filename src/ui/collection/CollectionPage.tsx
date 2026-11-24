@@ -140,12 +140,14 @@ export function CollectionPage() {
                   <span className="grow">{bookLabel(b)}</span>
                   <span className="tag">{b.type === 'komik' ? 'Komik' : 'Buku'}</span>
                   <span className={b.placement ? 'status placed' : 'status'}>{placementLabel(b, shelves)}</span>
-                  <button className="ghost" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
-                    Edit
-                  </button>
-                  <button className="ghost" onClick={() => setToDelete([b.id])} aria-label={`Hapus ${bookLabel(b)}`}>
-                    Hapus
-                  </button>
+                  <span className="row-actions">
+                    <button className="ghost" onClick={() => setPanel({ kind: 'edit', book: b })} aria-label={`Edit ${bookLabel(b)}`}>
+                      Edit
+                    </button>
+                    <button className="ghost danger" onClick={() => setToDelete([b.id])} aria-label={`Hapus ${bookLabel(b)}`}>
+                      Hapus
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>
