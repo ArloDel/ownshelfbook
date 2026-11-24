@@ -266,31 +266,46 @@ input[type='color'] {
 .topbar {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  gap: var(--space-6);
+  height: 56px;
+  padding: 0 var(--space-6);
+  background: var(--bg);
+  flex: none;
 }
 .topbar h1 {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
 }
 .topbar nav {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-4);
+  align-self: stretch;
 }
 .tab {
-  border-color: transparent;
+  height: 100%;
+  padding: 0 var(--space-1);
+  border-radius: 0;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.tab:hover:not(:disabled) {
   background: transparent;
+  color: var(--ink);
 }
 .tab.active {
-  background: var(--paper);
-  border-color: var(--line);
-  font-weight: 600;
+  color: var(--ink);
+  border-bottom-color: var(--accent);
 }
 .topbar-search {
   flex: 1;
   display: flex;
   justify-content: center;
+}
+.backup button {
+  color: var(--muted);
+  font-weight: 400;
+}
+.backup button:hover:not(:disabled) {
+  color: var(--ink);
 }
 .page {
   flex: 1;
@@ -298,7 +313,7 @@ input[type='color'] {
 }
 .page-collection {
   overflow: auto;
-  padding: var(--space-4) var(--space-6) var(--space-12);
+  padding: var(--space-6) var(--space-6) var(--space-12);
 }
 
 /* Collection */
@@ -578,7 +593,14 @@ input[type='color'] {
 /* Search and backup */
 .search {
   position: relative;
-  width: min(30rem, 100%);
+  width: min(25rem, 100%);
+}
+.search input {
+  background: var(--hover);
+  border-color: transparent;
+}
+.search input:focus-visible {
+  background: var(--surface);
 }
 .search input {
   width: 100%;
