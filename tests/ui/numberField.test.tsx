@@ -16,3 +16,10 @@ test('shows the value the parent kept when it clamps further', async () => {
   await user.type(field, '100{Enter}');
   expect(field).toHaveValue('69');
 });
+
+test('a short visible label keeps the full accessible name', () => {
+  render(<NumberField label="Tinggi tingkat 3" shortLabel="Tinggi" value={33} onChange={() => {}} />);
+  expect(screen.getByLabelText('Tinggi tingkat 3')).toHaveValue('33');
+  expect(screen.getByText('Tinggi')).toBeInTheDocument();
+  expect(screen.queryByText('Tinggi tingkat 3')).not.toBeInTheDocument();
+});
