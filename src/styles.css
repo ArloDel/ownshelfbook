@@ -51,7 +51,6 @@
   --control-h: 32px;
   color-scheme: light;
   font-family: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: var(--text-base);
   line-height: 1.45;
   color: var(--ink);
   background: var(--bg);
@@ -98,8 +97,10 @@
     box-sizing: border-box;
   }
 
+  /* Base size on body, not :root, so Tailwind's rem-based sizes stay at 16px rem. */
   body {
     margin: 0;
+    font-size: var(--text-base);
   }
 
   h1,
