@@ -633,3 +633,53 @@ input[type='color'] {
     animation: none !important;
   }
 }
+
+/* Phones: one column. 3D view on top, panels below, the page scrolls. */
+@media (max-width: 700px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .topbar-search {
+    order: 1;
+    flex-basis: 100%;
+  }
+  .search {
+    width: 100%;
+  }
+  .room {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'center'
+      'right'
+      'left';
+    height: auto;
+  }
+  .room-center {
+    grid-area: center;
+    height: 60vh;
+  }
+  .room-right {
+    grid-area: right;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .room-left {
+    grid-area: left;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+  .page-collection {
+    padding: var(--space-3) var(--space-3) var(--space-8);
+  }
+  .book-row {
+    flex-wrap: wrap;
+  }
+  .status {
+    min-width: 0;
+  }
+}
