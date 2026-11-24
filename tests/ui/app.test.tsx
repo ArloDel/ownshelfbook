@@ -20,7 +20,7 @@ test('tabs switch between room and collection', async () => {
   render(<App />);
   expect(await screen.findByText('ruang-3d')).toBeInTheDocument();
   await user.click(screen.getByRole('tab', { name: 'Koleksi' }));
-  expect(screen.getByRole('heading', { name: /Koleksi/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '0 buku' })).toBeInTheDocument();
 });
 
 test('store errors are shown and can be dismissed', async () => {
