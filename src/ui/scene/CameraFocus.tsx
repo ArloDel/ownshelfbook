@@ -7,6 +7,12 @@ import { useUiStore } from '../../store/uiStore';
 
 const DURATION = 0.7;
 
+/** Seconds for the camera flight; 0 = jump straight there. */
+export const focusDuration = (reducedMotion: boolean) => (reducedMotion ? 0 : DURATION);
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 interface Controls {
   target: Vector3;
   update(): void;
@@ -40,7 +46,8 @@ export function CameraFocus() {
   useFrame((_, delta) => {
     const a = anim.current;
     if (!a || !controls) return;
-    a.t = Math.min(1, a.t + delta / DURATION);
+    const duration = focusDuration(prefersReducedMotion());
+    a.t = duration === 0 ? 1 : Math.min(1, a.t + delta / duration);
     const k = 1 - Math.pow(1 - a.t, 3);
     camera.position.lerpVectors(a.fromPos, a.toPos, k);
     controls.target.lerpVectors(a.fromTarget, a.toTarget, k);
