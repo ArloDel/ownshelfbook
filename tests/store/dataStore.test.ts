@@ -117,3 +117,57 @@ test('import refits rows whose widths do not fill the shelf', async () => {
   await s.getState().importData(toBackup({ room: DEFAULT_ROOM, shelves: [shelf], books: [] }));
   expect(s.getState().shelves[0].colWidthsCm[0]).toEqual([10, 68]);
 });
+
+describe('two layers', () => {
+  async function storeWithBack() {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 4 });
+    const id = await s.getState().addShelf('kubus');
+    const [a, b, c, d] = s.getState().books.map((x) => x.id);
+    await s.getState().placeBooks([a, b], { shelfId: id, row: 0, col: 0 });
+    await s.getState().placeBooks([c, d], { shelfId: id, row: 0, col: 0 }, 'belakang');
+    return { s, id, ids: [a, b, c, d] };
+  }
+
+  test('placeBooks on the back layer is saved and loads back', async () => {
+    const { ids } = await storeWithBack();
+    const fresh = createDataStore();
+    await fresh.getState().hydrate();
+    const layerOfId = (id: string) => fresh.getState().books.find((x) => x.id === id)!.placement!.layer;
+    expect(ids.map(layerOfId)).toEqual(['depan', 'depan', 'belakang', 'belakang']);
+  });
+
+  test('moveToLayer is saved', async () => {
+    const { s, ids } = await storeWithBack();
+    await s.getState().moveToLayer(ids[0], 'belakang');
+    const saved = (await loadAll()).books.find((x) => x.id === ids[0])!;
+    expect(saved.placement!.layer).toBe('belakang');
+  });
+
+  test('a shelf made shallower than 26 cm sends its back layer to unplaced', async () => {
+    const { s, id, ids } = await storeWithBack();
+    await s.getState().reshapeShelf(id, { ...s.getState().shelves[0], depthCm: 20 });
+    const byId = (x: string) => s.getState().books.find((b) => b.id === x)!;
+    expect(ids.map((x) => byId(x).placement === null)).toEqual([false, false, true, true]);
+    expect(s.getState().shelves[0].depthCm).toBe(20);
+  });
+
+  test('import drops back-layer books on shallow shelves and clamps the riser', async () => {
+    const shallow = { ...createShelf('dinding', 'D'), backRiserCm: 99 };
+    const deep = createShelf('kubus', 'K');
+    const s0 = createDataStore();
+    await s0.getState().hydrate();
+    await s0.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 2 });
+    const [a, b] = s0.getState().books;
+    const books = [
+      { ...a, placement: { shelfId: shallow.id, row: 0, col: 0, order: 0, layer: 'belakang' as const } },
+      { ...b, placement: { shelfId: deep.id, row: 0, col: 0, order: 0, layer: 'belakang' as const } },
+    ];
+    const s = createDataStore();
+    await s.getState().importData(toBackup({ room: DEFAULT_ROOM, shelves: [shallow, deep], books }));
+    expect(s.getState().books.find((x) => x.id === a.id)!.placement).toBeNull();
+    expect(s.getState().books.find((x) => x.id === b.id)!.placement!.layer).toBe('belakang');
+    expect(s.getState().shelves.find((x) => x.id === shallow.id)!.backRiserCm).toBe(15);
+  });
+});

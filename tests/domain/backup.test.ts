@@ -70,3 +70,35 @@ test('v2 rejects a shelf without inner width', () => {
   delete obj.shelves[0].innerWidthCm;
   expect(() => parseBackup(JSON.stringify(obj))).toThrow();
 });
+
+describe('layers in backups', () => {
+  const withBack = () => {
+    const obj = JSON.parse(toBackup(data));
+    obj.books[0].placement = { shelfId: data.shelves[0].id, row: 0, col: 0, order: 0, layer: 'belakang' };
+    obj.shelves[0].backRiserCm = 6;
+    return obj;
+  };
+
+  test('a back-layer book and a riser height load as they are', () => {
+    const d = parseBackup(JSON.stringify(withBack()));
+    expect(d.books[0].placement!.layer).toBe('belakang');
+    expect(d.shelves[0].backRiserCm).toBe(6);
+  });
+
+  test('an unknown layer or a riser that is not a number is rejected', () => {
+    const badLayer = withBack();
+    badLayer.books[0].placement.layer = 'samping';
+    expect(() => parseBackup(JSON.stringify(badLayer))).toThrow('buku ke-1');
+    const badRiser = withBack();
+    badRiser.shelves[0].backRiserCm = 'x';
+    expect(() => parseBackup(JSON.stringify(badRiser))).toThrow('rak ke-1');
+  });
+
+  test('older files without layers or risers still load', () => {
+    const obj = JSON.parse(toBackup(data));
+    obj.books[0].placement = { shelfId: data.shelves[0].id, row: 0, col: 0, order: 0 };
+    const d = parseBackup(JSON.stringify(obj));
+    expect(d.books[0].placement!.layer).toBeUndefined();
+    expect(d.shelves[0].backRiserCm).toBeUndefined();
+  });
+});
