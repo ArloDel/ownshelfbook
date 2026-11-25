@@ -1,4 +1,4 @@
-import { canDoubleStack, riserOf, slotRect } from './shelves';
+import { canDoubleStack, columnCount, riserOf, slotRect } from './shelves';
 import type { Book, Layer, Placement, Shelf, SlotRef } from './types';
 
 export const layerOf = (p: Placement): Layer => p.layer ?? 'depan';
@@ -132,4 +132,48 @@ export function countBooksOutside(books: Book[], layout: ShelfLayout): number {
 
 export function returnBooksOutside(books: Book[], layout: ShelfLayout): Book[] {
   return books.map((b) => (isOutside(b, layout) ? { ...b, placement: null } : b));
+}
+
+export interface FillResult {
+  books: Book[];
+  /** Ids that went into the shelf, in order. */
+  placed: string[];
+  /** Ids that did not fit, in order. */
+  rest: string[];
+}
+
+const FIT_EPS = 1e-6;
+
+/**
+ * Put books into one layer of a slot, in the given order, only as far as they fit.
+ * Stops at the first book that does not fit, so a series is never split out of order.
+ * Books already on that layer of the slot are left where they are.
+ */
+export function fillLayer(books: Book[], ids: string[], shelf: Shelf, slot: SlotRef, layer: Layer): FillResult {
+  const byId = new Map(books.map((b) => [b.id, b]));
+  const already = new Set(booksInSlot(books, slot, layer).map((b) => b.id));
+  const queue = ids.filter((id) => byId.has(id) && !already.has(id));
+  const capacity = slotRect(shelf, slot.row, slot.col).width;
+  let used = slotUsage(books, shelf, slot.row, slot.col, layer).usedCm;
+  let n = 0;
+  while (n < queue.length && used + byId.get(queue[n])!.thicknessCm <= capacity + FIT_EPS) {
+    used += byId.get(queue[n])!.thicknessCm;
+    n++;
+  }
+  const placed = queue.slice(0, n);
+  return { books: placed.length ? placeBooks(books, placed, slot, layer) : books, placed, rest: queue.slice(n) };
+}
+
+export function hasSlotRight(shelf: Shelf, slot: SlotRef): boolean {
+  return slot.col + 1 < columnCount(shelf, slot.row);
+}
+
+/** Fill the same layer of the slots to the right of `slot`, on the same tier, until the books run out. */
+export function flowRight(books: Book[], ids: string[], shelf: Shelf, slot: SlotRef, layer: Layer): FillResult {
+  let result: FillResult = { books, placed: [], rest: ids };
+  for (let col = slot.col + 1; col < columnCount(shelf, slot.row) && result.rest.length; col++) {
+    const step = fillLayer(result.books, result.rest, shelf, { ...slot, col }, layer);
+    result = { books: step.books, placed: [...result.placed, ...step.placed], rest: step.rest };
+  }
+  return result;
 }
