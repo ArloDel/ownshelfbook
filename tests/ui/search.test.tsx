@@ -30,3 +30,15 @@ test('choosing an unplaced book filters the unplaced list', async () => {
   await user.click(await screen.findByRole('option', { name: /Naruto 1.*Belum ditata/ }));
   expect(useUiStore.getState()).toMatchObject({ page: 'room', highlightBookId: b1.id, unplacedFilter: 'Naruto 1' });
 });
+
+test('choosing a back-layer book opens the back layer of its slot', async () => {
+  const id = await useDataStore.getState().addShelf('kubus');
+  const [b] = await useDataStore.getState().addSeries({ series: 'Naruto', type: 'komik', from: 1, to: 1 });
+  await useDataStore.getState().placeBooks([b.id], { shelfId: id, row: 0, col: 1 }, 'belakang');
+  const user = userEvent.setup();
+  render(<SearchBox />);
+  await user.type(screen.getByRole('combobox', { name: 'Cari buku' }), 'naruto 1');
+  await user.click(await screen.findByRole('option', { name: /Naruto 1.*Rak 1 T1K2 belakang/ }));
+  expect(useUiStore.getState().selectedSlot).toEqual({ shelfId: id, row: 0, col: 1 });
+  expect(useUiStore.getState().slotLayer).toBe('belakang');
+});

@@ -16,5 +16,6 @@ export async function resetAll() {
     highlightBookId: null,
     focusShelfId: null,
     unplacedFilter: '',
+    slotLayer: 'depan',
   });
 }

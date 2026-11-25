@@ -61,3 +61,11 @@ test('filter by status', async () => {
   await user.selectOptions(screen.getByLabelText('Status'), 'ditata');
   expect(screen.queryByRole('region', { name: 'Naruto' })).not.toBeInTheDocument();
 });
+
+test('a book on the back layer says so in its placement', async () => {
+  const id = await useDataStore.getState().addShelf('kubus');
+  const [b] = await useDataStore.getState().addSeries({ series: 'Naruto', type: 'komik', from: 1, to: 1 });
+  await useDataStore.getState().placeBooks([b.id], { shelfId: id, row: 0, col: 0 }, 'belakang');
+  render(<CollectionPage />);
+  expect(await screen.findByText('Rak 1 T1K1 belakang')).toBeInTheDocument();
+});
