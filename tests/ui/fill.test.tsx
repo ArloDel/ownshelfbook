@@ -30,7 +30,7 @@ test('place checked books into the selected slot, then take one out', async () =
   for (const v of ['Naruto 1', 'Naruto 2', 'Naruto 3']) {
     await user.click(within(unplaced()).getByRole('checkbox', { name: v }));
   }
-  await user.click(screen.getByRole('button', { name: 'Taruh di slot ini (3)' }));
+  await user.click(screen.getByRole('button', { name: 'Taruh di lapis depan (3)' }));
   await waitFor(() => expect(within(slot()).getAllByRole('listitem')).toHaveLength(3));
   expect(within(unplaced()).queryByRole('checkbox', { name: 'Naruto 1' })).not.toBeInTheDocument();
   await waitFor(() => expect(useUiStore.getState().checkedBookIds).toEqual([]));
@@ -43,13 +43,13 @@ test('place checked books into the selected slot, then take one out', async () =
 test('select all volumes of a series', async () => {
   const { user } = await setup(4);
   await user.click(within(unplaced()).getByRole('checkbox', { name: 'Pilih semua Naruto' }));
-  expect(screen.getByRole('button', { name: 'Taruh di slot ini (4)' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Taruh di lapis depan (4)' })).toBeEnabled();
 });
 
 test('overflowing slot shows a warning', async () => {
   const { user } = await setup(30);
   await user.click(within(unplaced()).getByRole('checkbox', { name: 'Pilih semua Naruto' }));
-  await user.click(screen.getByRole('button', { name: 'Taruh di slot ini (30)' }));
+  await user.click(screen.getByRole('button', { name: 'Taruh di lapis depan (30)' }));
   expect(await within(slot()).findByText(/Meluap/)).toBeInTheDocument();
   expect(within(slot()).getAllByRole('listitem')).toHaveLength(30);
 });
@@ -79,7 +79,7 @@ describe('two layers', () => {
     await user.click(within(slot()).getByRole('radio', { name: 'Belakang' }));
     await user.click(within(unplaced()).getByLabelText('Naruto 1'));
     await user.click(within(unplaced()).getByLabelText('Naruto 2'));
-    await user.click(within(slot()).getByRole('button', { name: 'Taruh di slot ini (2)' }));
+    await user.click(within(slot()).getByRole('button', { name: 'Taruh di lapis belakang (2)' }));
     await waitFor(() =>
       expect(useDataStore.getState().books.filter((b) => b.placement?.layer === 'belakang').map((b) => b.volume).sort()).toEqual([1, 2]),
     );
@@ -106,4 +106,22 @@ test('a shallow wall shelf has a single layer and no move buttons', async () => 
   const region = screen.getByRole('region', { name: /Tingkat 1 · Kolom 1/ });
   expect(within(region).queryByRole('radiogroup', { name: 'Lapis' })).not.toBeInTheDocument();
   expect(within(region).queryByRole('button', { name: /Pindah/ })).not.toBeInTheDocument();
+});
+
+test('on the back layer, a too-tall warning points at the riser', async () => {
+  const id = await useDataStore.getState().addShelf('kubus');
+  // A 22 cm row with a 15 cm riser leaves 7 cm: an 18 cm comic does not fit.
+  await useDataStore.getState().updateShelf(id, { backRiserCm: 15, rowHeightsCm: [22, 33, 33, 33] });
+  const [b] = await useDataStore.getState().addSeries({ series: 'Naruto', type: 'komik', from: 1, to: 1 });
+  await useDataStore.getState().placeBooks([b.id], { shelfId: id, row: 0, col: 0 }, 'belakang');
+  useUiStore.setState({ mode: 'isi', selectedSlot: { shelfId: id, row: 0, col: 0 }, selectedShelfId: id, slotLayer: 'belakang' });
+  render(<SlotPanel />);
+  expect(await screen.findByText('Ada buku lebih tinggi dari ruang di atas penyangga. Turunkan penyangga di panel rak.')).toBeInTheDocument();
+});
+
+test('the place button names the layer it places into', async () => {
+  const { user } = await setup();
+  expect(within(slot()).getByRole('button', { name: 'Taruh di lapis depan (0)' })).toBeInTheDocument();
+  await user.click(within(slot()).getByRole('radio', { name: 'Belakang' }));
+  expect(within(slot()).getByRole('button', { name: 'Taruh di lapis belakang (0)' })).toBeInTheDocument();
 });

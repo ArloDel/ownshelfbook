@@ -35,6 +35,6 @@ test('place button shows a placing state', async () => {
   useUiStore.setState({ mode: 'isi', selectedSlot: { shelfId: id, row: 0, col: 0 }, checkedBookIds: [b.id] });
   const user = userEvent.setup();
   render(<SlotPanel />);
-  await user.click(screen.getByRole('button', { name: 'Taruh di slot ini (1)' }));
+  await user.click(screen.getByRole('button', { name: 'Taruh di lapis depan (1)' }));
   expect(screen.getByRole('button', { name: 'Menaruh…' })).toBeDisabled();
 });
