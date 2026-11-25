@@ -7,8 +7,12 @@ import {
   DIM_MAX_CM,
   DIM_MIN_CM,
   MAX_INNER_WIDTH_CM,
+  MAX_RISER_CM,
   MAX_ROWS_COLS,
   SHELF_PRESETS,
+  canDoubleStack,
+  clampRiser,
+  riserOf,
   setColumnCount,
   setColumnWidth,
   setInnerWidth,
@@ -129,12 +133,22 @@ export function ShelfPanel() {
         <NumberField label="Jumlah tingkat" shortLabel="Tingkat" value={rows} min={1} max={MAX_ROWS_COLS} onChange={(v) => reshape(setRowCount(shelf, v))} />
       </div>
       <div className="row">
-        <NumberField label="Kedalaman" value={shelf.depthCm} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => void updateShelf(shelf.id, { depthCm: v })} />
+        <NumberField label="Kedalaman" value={shelf.depthCm} min={DIM_MIN_CM} max={DIM_MAX_CM} suffix="cm" onChange={(v) => reshape({ ...shelf, depthCm: v })} />
         <label className="field">
           <span>Kayu</span>
           <input type="color" aria-label="Warna kayu" value={shelf.color} onChange={(e) => void updateShelf(shelf.id, { color: e.target.value })} />
         </label>
       </div>
+      {canDoubleStack(shelf) && (
+        <NumberField
+          label="Penyangga belakang"
+          value={riserOf(shelf)}
+          min={0}
+          max={MAX_RISER_CM}
+          suffix="cm"
+          onChange={(v) => void updateShelf(shelf.id, { backRiserCm: clampRiser(v) })}
+        />
+      )}
 
       <h4>Tingkat</h4>
       <p className="hint">Tingkat 1 = paling bawah. Kolom 1 = paling kiri (dilihat dari depan). Kolom terakhir menyesuaikan otomatis.</p>
