@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { bookLabel, placementLabel } from '../common/labels';
 import { BookForm } from './BookForm';
 import { SeriesForm } from './SeriesForm';
+import { SpineImageButton } from './SpineImageDialog';
 
 type TypeFilter = 'semua' | BookType;
 type StatusFilter = 'semua' | 'ditata' | 'belum';
@@ -125,6 +126,7 @@ export function CollectionPage() {
               />
               <h3>{name}</h3>
               <small>{list.length} buku</small>
+              <SpineImageButton name={name} />
             </header>
             <ul>
               {list.map((b) => (
