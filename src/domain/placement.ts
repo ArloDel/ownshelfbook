@@ -67,10 +67,30 @@ export function moveInSlot(books: Book[], id: string, newIndex: number): Book[] 
 
 /** Send a placed book to the end of the other layer of its slot. */
 export function moveToLayer(books: Book[], id: string, layer: Layer): Book[] {
-  const book = books.find((b) => b.id === id);
-  if (!book?.placement || layerOf(book.placement) === layer) return books;
-  const { shelfId, row, col } = book.placement;
-  return placeBooks(books, [id], { shelfId, row, col }, layer);
+  return moveBooksToLayer(books, [id], layer);
+}
+
+/**
+ * Send placed books to the end of `layer` in their own slots, keeping their current order.
+ * Unplaced books and books already on that layer are left alone.
+ */
+export function moveBooksToLayer(books: Book[], ids: string[], layer: Layer): Book[] {
+  const wanted = new Set(ids);
+  const moving = books
+    .filter((b) => wanted.has(b.id) && b.placement !== null && layerOf(b.placement) !== layer)
+    .sort((a, b) => a.placement!.order - b.placement!.order);
+  if (!moving.length) return books;
+  const bySlot = new Map<string, { slot: SlotRef; ids: string[] }>();
+  for (const b of moving) {
+    const { shelfId, row, col } = b.placement!;
+    const key = `${shelfId}|${row}|${col}`;
+    const entry = bySlot.get(key) ?? { slot: { shelfId, row, col }, ids: [] };
+    entry.ids.push(b.id);
+    bySlot.set(key, entry);
+  }
+  let next = books;
+  for (const { slot, ids: group } of bySlot.values()) next = placeBooks(next, group, slot, layer);
+  return next;
 }
 
 export function slotUsage(
