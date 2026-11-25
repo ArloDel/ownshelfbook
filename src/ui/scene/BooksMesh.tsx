@@ -3,11 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three';
 import { booksInSlot } from '../../domain/placement';
-import { columnCount, slotRect } from '../../domain/shelves';
-import type { Book, Shelf } from '../../domain/types';
+import { canDoubleStack, columnCount, riserOf, slotRect } from '../../domain/shelves';
+import type { Book, Layer, Shelf } from '../../domain/types';
 import { bookLabel } from '../common/labels';
 import { bandColor, heightFactor, leanBook, spineBands } from './bookLook';
-import { layoutBooksInSlot } from './layout';
+import { backBookDepth, backBookZ, backSpace, riserBox } from './layers';
+import { layoutBooksInSlot, type SlotBox } from './layout';
 
 const BOOK_DEPTH = { komik: 13, buku: 15 } as const;
 const LABEL_DISTANCE_M = 2.5;
@@ -20,44 +21,82 @@ export interface PlacedBook {
   size: [number, number, number];
   /** Lean around the shelf's z axis (radians, counter-clockwise seen from the front). */
   tilt: number;
+  layer: Layer;
+}
+
+export interface Riser {
+  shelf: Shelf;
+  position: [number, number, number];
+  size: [number, number, number];
+}
+
+/** Lay out one layer of a slot: books stand left to right, the last one leans when there is room. */
+function placeLayer(
+  out: PlacedBook[],
+  byId: Map<string, Book>,
+  shelf: Shelf,
+  rect: SlotBox,
+  inSlot: Book[],
+  layer: Layer,
+  depthAndZ: (bookDepth: number) => { depth: number; z: number },
+) {
+  if (!inSlot.length || rect.height <= 0) return;
+  const boxes = layoutBooksInSlot(inSlot, rect);
+  const shown = boxes.filter((b) => b.visible);
+  // A layer with overflow is full: nothing can lean.
+  const leanLast = shown.length === boxes.length;
+  shown.forEach((box, i) => {
+    const book = byId.get(box.id)!;
+    const { depth, z } = depthAndZ(Math.max(2, Math.min(BOOK_DEPTH[book.type], shelf.depthCm - 2)));
+    const height = box.height * heightFactor(book.id);
+    const width = box.width * 0.96;
+    const upright = { left: box.x - width / 2, bottom: box.y, width, height };
+    const pose =
+      leanLast && i === shown.length - 1
+        ? leanBook(upright, rect.x + rect.width, rect.y + rect.height)
+        : { cx: box.x, cy: box.y + height / 2, tilt: 0 };
+    out.push({ book, shelf, local: [pose.cx, pose.cy, z], size: [width, height, depth], tilt: pose.tilt, layer });
+  });
+}
+
+/** Every visible placed book with its shelf-local box, plus the risers under back layers that hold books. */
+export function placedLayout(books: Book[], shelves: Shelf[]): { placed: PlacedBook[]; risers: Riser[] } {
+  const placed: PlacedBook[] = [];
+  const risers: Riser[] = [];
+  const byId = new Map(books.map((b) => [b.id, b]));
+  for (const shelf of shelves) {
+    const double = canDoubleStack(shelf);
+    for (let r = 0; r < shelf.rowHeightsCm.length; r++) {
+      for (let c = 0; c < columnCount(shelf, r); c++) {
+        const slot = { shelfId: shelf.id, row: r, col: c };
+        const rect = slotRect(shelf, r, c);
+        const start = placed.length;
+        // Front layer: flush with the front edge, as before.
+        placeLayer(placed, byId, shelf, rect, booksInSlot(books, slot, 'depan'), 'depan', (d) => ({
+          depth: d,
+          z: shelf.depthCm / 2 - d / 2 - 1,
+        }));
+        const back = double ? booksInSlot(books, slot, 'belakang') : [];
+        if (!back.length) continue;
+        const frontDeepest = Math.max(0, ...placed.slice(start).map((p) => p.size[2]));
+        const space = backSpace(shelf, frontDeepest);
+        const riser = riserOf(shelf);
+        const backRect = { ...rect, y: rect.y + riser, height: Math.max(0, rect.height - riser) };
+        placeLayer(placed, byId, shelf, backRect, back, 'belakang', (d) => {
+          const depth = backBookDepth(d, space);
+          return { depth, z: backBookZ(depth, space) };
+        });
+        const box = riserBox(rect, space, riser);
+        if (box) risers.push({ shelf, ...box });
+      }
+    }
+  }
+  return { placed, risers };
 }
 
 /** Every visible placed book with its shelf-local box. */
 export function placedBookBoxes(books: Book[], shelves: Shelf[]): PlacedBook[] {
-  const out: PlacedBook[] = [];
-  const byId = new Map(books.map((b) => [b.id, b]));
-  for (const shelf of shelves) {
-    for (let r = 0; r < shelf.rowHeightsCm.length; r++) {
-      for (let c = 0; c < columnCount(shelf, r); c++) {
-        const inSlot = booksInSlot(books, { shelfId: shelf.id, row: r, col: c });
-        if (!inSlot.length) continue;
-        const rect = slotRect(shelf, r, c);
-        const boxes = layoutBooksInSlot(inSlot, rect);
-        const shown = boxes.filter((b) => b.visible);
-        // A slot with overflow is full: nothing can lean.
-        const leanLast = shown.length === boxes.length;
-        shown.forEach((box, i) => {
-          const book = byId.get(box.id)!;
-          const depth = Math.max(2, Math.min(BOOK_DEPTH[book.type], shelf.depthCm - 2));
-          const height = box.height * heightFactor(book.id);
-          const width = box.width * 0.96;
-          const upright = { left: box.x - width / 2, bottom: box.y, width, height };
-          const pose =
-            leanLast && i === shown.length - 1
-              ? leanBook(upright, rect.x + rect.width, rect.y + rect.height)
-              : { cx: box.x, cy: box.y + height / 2, tilt: 0 };
-          out.push({
-            book,
-            shelf,
-            local: [pose.cx, pose.cy, shelf.depthCm / 2 - depth / 2 - 1],
-            size: [width, height, depth],
-            tilt: pose.tilt,
-          });
-        });
-      }
-    }
-  }
-  return out;
+  return placedLayout(books, shelves).placed;
 }
 
 const dummy = new Object3D();
@@ -75,7 +114,7 @@ function shelfWorld(s: Shelf, m: Matrix4) {
 }
 
 export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shelves: Shelf[]; highlightId?: string | null }) {
-  const placed = useMemo(() => placedBookBoxes(books, shelves), [books, shelves]);
+  const { placed, risers } = useMemo(() => placedLayout(books, shelves), [books, shelves]);
   const ref = useRef<InstancedMesh>(null);
   const bandsRef = useRef<InstancedMesh>(null);
   const capacity = Math.max(1, placed.length);
@@ -126,6 +165,14 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
         <meshStandardMaterial roughness={0.6} />
       </instancedMesh>
       <SpineLabels placed={placed} shelves={shelves} />
+      {risers.map((r, i) => (
+        <group key={`riser-${r.shelf.id}-${i}`} position={[r.shelf.position.x, r.shelf.elevationCm, r.shelf.position.z]} rotation-y={(r.shelf.rotationY * Math.PI) / 180}>
+          <mesh position={r.position} castShadow receiveShadow raycast={() => null}>
+            <boxGeometry args={r.size} />
+            <meshStandardMaterial color={bandColor(r.shelf.color)} roughness={0.8} />
+          </mesh>
+        </group>
+      ))}
     </>
   );
 }

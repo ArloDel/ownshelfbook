@@ -20,7 +20,7 @@ export function SlotHits({ shelf, books, selected, onSelect }: Props) {
     for (let c = 0; c < columnCount(shelf, r); c++) {
       const rect = slotRect(shelf, r, c);
       const isSel = selected?.shelfId === shelf.id && selected.row === r && selected.col === c;
-      const over = slotUsage(books, shelf, r, c).overflow;
+      const over = slotUsage(books, shelf, r, c, 'depan').overflow || slotUsage(books, shelf, r, c, 'belakang').overflow;
       const click = (e: ThreeEvent<MouseEvent>) => {
         e.stopPropagation();
         if (!isClick(e)) return;
