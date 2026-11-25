@@ -64,7 +64,8 @@ function SpineImageDialog({ name, onClose }: { name: string; onClose(): void }) 
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+      {/* Paste anywhere in the dialog: Ctrl+V right after opening it is the quickest way in. */}
+      <DialogContent showCloseButton={false} className="sm:max-w-md" onPaste={(e) => void take(e.clipboardData?.files?.[0])}>
         <DialogHeader>
           <DialogTitle>Gambar punggung — {name}</DialogTitle>
           <DialogDescription>Satu gambar untuk semua volume seri ini. Nomor volume tampil di punggungnya.</DialogDescription>
@@ -72,8 +73,6 @@ function SpineImageDialog({ name, onClose }: { name: string; onClose(): void }) 
 
         <div
           className="spine-drop"
-          tabIndex={0}
-          onPaste={(e) => void take(e.clipboardData?.files?.[0])}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -155,6 +154,8 @@ function SpineImageDialog({ name, onClose }: { name: string; onClose(): void }) 
               try {
                 await setCover(name, preview);
                 onClose();
+              } catch (err) {
+                setError((err as Error).message);
               } finally {
                 setSaving(false);
               }

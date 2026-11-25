@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { parseBackup, toBackup } from '../domain/backup';
+import { MAX_COVER_CHARS, parseBackup, toBackup } from '../domain/backup';
 import { createBook, createSeriesBooks, type NewBookInput, type NewSeriesInput } from '../domain/books';
 import {
   fillLayer,
@@ -350,6 +350,8 @@ export const createDataStore = () =>
       },
 
       async setCover(key, image) {
+        // Never keep an image a backup could not carry back in: that export would be refused on restore.
+        if (image.length > MAX_COVER_CHARS) throw new Error('Gambar terlalu besar untuk disimpan. Pilih gambar lain.');
         await commit({ covers: { ...get().covers, [key]: image } }, () => repo.saveCover({ key, image }));
       },
 

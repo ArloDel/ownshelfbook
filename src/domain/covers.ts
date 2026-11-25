@@ -6,6 +6,8 @@ export const seriesKey = (b: Pick<Book, 'series' | 'title'>): string => b.series
 const FALLBACK_RATIO = 1 / 8;
 export const SPINE_HEIGHT_PX = 512;
 const MIN_SPINE_WIDTH_PX = 16;
+/** A strip never wider than half its height: keeps every image small enough for a backup. */
+const MAX_SPINE_WIDTH_PX = SPINE_HEIGHT_PX / 2;
 
 /** Width ÷ height of the series' spine, from its first volume, so the image is not stretched. */
 export function seriesSpineRatio(books: Book[], key: string): number {
@@ -24,7 +26,7 @@ export function spineCrop(srcW: number, srcH: number, ratio: number, pos: number
     sy: 0,
     sw,
     sh: srcH,
-    outW: Math.max(MIN_SPINE_WIDTH_PX, Math.round(SPINE_HEIGHT_PX * ratio)),
+    outW: Math.min(MAX_SPINE_WIDTH_PX, Math.max(MIN_SPINE_WIDTH_PX, Math.round(SPINE_HEIGHT_PX * ratio))),
     outH: SPINE_HEIGHT_PX,
   };
 }

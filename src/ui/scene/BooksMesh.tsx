@@ -7,7 +7,7 @@ import { booksInSlot } from '../../domain/placement';
 import { canDoubleStack, columnCount, riserOf, slotRect } from '../../domain/shelves';
 import type { Book, Layer, Shelf } from '../../domain/types';
 import { bandColor, heightFactor, leanBook, spineBands } from './bookLook';
-import { splitByCover, spineLabelText } from './covers3d';
+import { splitByCover, spineLabelText, volumeFontSize } from './covers3d';
 import { backBookDepth, backBookZ, backSpace, riserBox } from './layers';
 import { layoutBooksInSlot, type SlotBox } from './layout';
 
@@ -139,7 +139,7 @@ export function BooksMesh({
   covers?: Record<string, string>;
 }) {
   const { placed, risers } = useMemo(() => placedLayout(books, shelves), [books, shelves]);
-  const { plain, covered } = useMemo(() => splitByCover(placed, covers), [placed, covers]);
+  const { plain, covered } = useMemo(() => splitByCover(placed, covers, highlightId), [placed, covers, highlightId]);
   const ref = useRef<InstancedMesh>(null);
   const bandsRef = useRef<InstancedMesh>(null);
   const capacity = Math.max(1, placed.length);
@@ -271,7 +271,7 @@ function SpineLabels({ placed, shelves, covers }: { placed: PlacedBook[]; shelve
           const turn = (p.shelf.rotationY * Math.PI) / 180;
           if (hasCover && p.book.volume !== undefined) {
             // Volume number, upright near the foot of the spine, on a dark band so it reads over the picture.
-            const size = Math.min(p.size[0] * 0.8, 2.2);
+            const size = volumeFontSize(p.size[0], text);
             return (
               <group key={p.book.id} position={at} rotation-y={turn}>
                 <group position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.06]} rotation-z={p.tilt}>

@@ -23,7 +23,7 @@ export function loadImage(source: Blob): Promise<HTMLImageElement> {
 
 /**
  * Cut the spine strip out of an image and shrink it to 512 px tall.
- * WebP when the browser can encode it, otherwise PNG.
+ * WebP when the browser can encode it, otherwise JPEG.
  */
 export function renderSpine(img: HTMLImageElement, ratio: number, pos: number): string {
   const c = spineCrop(img.naturalWidth, img.naturalHeight, ratio, pos);
@@ -35,5 +35,6 @@ export function renderSpine(img: HTMLImageElement, ratio: number, pos: number): 
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, c.sx, c.sy, c.sw, c.sh, 0, 0, c.outW, c.outH);
   const webp = canvas.toDataURL('image/webp', 0.8);
-  return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png');
+  // Browsers that cannot encode WebP get JPEG, which stays small; PNG of a photo can be too big for a backup.
+  return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85);
 }
