@@ -1,4 +1,7 @@
 import {
+  canDoubleStack,
+  clampRiser,
+  riserOf,
   clampDim,
   clampShelfToRoom,
   columnCount,
@@ -162,4 +165,17 @@ test('setColumnCount above the room maximum keeps custom widths', () => {
   s = setColumnCount(s, 0, 4);
   s = setColumnWidth(s, 0, 0, 9);
   expect(setColumnCount(s, 0, 20).colWidthsCm[0]).toEqual(s.colWidthsCm[0]);
+});
+
+test('two layers need a shelf at least 26 cm deep', () => {
+  expect(canDoubleStack({ depthCm: 26 })).toBe(true);
+  expect(canDoubleStack({ depthCm: 25.9 })).toBe(false);
+  expect(canDoubleStack(createShelf('dinding', 'D'))).toBe(false);
+  expect(canDoubleStack(createShelf('rak-buku', 'R'))).toBe(true);
+});
+
+test('riser defaults to 5 cm and is clamped to 0–15 in 0.5 steps', () => {
+  expect(riserOf({})).toBe(5);
+  expect(riserOf({ backRiserCm: 8 })).toBe(8);
+  expect([clampRiser(-2), clampRiser(7.3), clampRiser(40), clampRiser(NaN)]).toEqual([0, 7.5, 15, 5]);
 });
