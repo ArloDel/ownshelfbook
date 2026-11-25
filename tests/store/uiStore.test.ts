@@ -23,13 +23,13 @@ test('focusBook sets the book and its shelf', () => {
   expect(s.getState()).toMatchObject({ highlightBookId: 'b1', focusShelfId: 'shelf1' });
 });
 
-test('selecting a slot can open its back layer; another slot opens the front again', () => {
+test('a slot opens on its back layer unless a layer is named', () => {
   const s = createUiStore();
-  expect(s.getState().slotLayer).toBe('depan');
-  s.getState().selectSlot({ shelfId: 'a', row: 0, col: 0 }, 'belakang');
   expect(s.getState().slotLayer).toBe('belakang');
+  s.getState().selectSlot({ shelfId: 'a', row: 0, col: 0 }, 'depan');
+  expect(s.getState().slotLayer).toBe('depan');
   s.getState().selectSlot({ shelfId: 'a', row: 1, col: 0 });
-  expect(s.getState().slotLayer).toBe('depan');
-  s.getState().setSlotLayer('belakang');
   expect(s.getState().slotLayer).toBe('belakang');
+  s.getState().setSlotLayer('depan');
+  expect(s.getState().slotLayer).toBe('depan');
 });
