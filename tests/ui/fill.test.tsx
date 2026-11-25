@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDataStore } from '../../src/store/dataStore';
 import { useUiStore } from '../../src/store/uiStore';
@@ -124,4 +124,60 @@ test('the place button names the layer it places into', async () => {
   expect(within(slot()).getByRole('button', { name: 'Taruh di lapis depan (0)' })).toBeInTheDocument();
   await user.click(within(slot()).getByRole('radio', { name: 'Belakang' }));
   expect(within(slot()).getByRole('button', { name: 'Taruh di lapis belakang (0)' })).toBeInTheDocument();
+});
+
+describe('selecting books in a slot', () => {
+  async function filled() {
+    const ctx = await setup(4);
+    const ids = useDataStore.getState().books.map((b) => b.id);
+    await useDataStore.getState().placeBooks(ids, { shelfId: ctx.id, row: 0, col: 0 });
+    return { ...ctx, ids };
+  }
+  const placedLayer = (vol: number) => useDataStore.getState().books.find((b) => b.volume === vol)!.placement?.layer ?? null;
+
+  test('a series checkbox picks every book of that run, then all of them move to the back', async () => {
+    const { user } = await filled();
+    await user.click(await within(slot()).findByRole('checkbox', { name: 'Pilih semua Naruto' }));
+    const bar = within(slot()).getByRole('region', { name: 'Buku dipilih di slot' });
+    expect(bar).toHaveTextContent('4 dipilih');
+    await user.click(within(bar).getByRole('button', { name: 'Pindah ke belakang' }));
+    await waitFor(() => expect([1, 2, 3, 4].map(placedLayer)).toEqual(['belakang', 'belakang', 'belakang', 'belakang']));
+    expect(useUiStore.getState().checkedBookIds).toEqual([]);
+  });
+
+  test('take a few checked books out of the slot at once', async () => {
+    const { user } = await filled();
+    await user.click(await within(slot()).findByRole('checkbox', { name: 'Pilih Naruto 1' }));
+    await user.click(within(slot()).getByRole('checkbox', { name: 'Pilih Naruto 3' }));
+    await user.click(within(within(slot()).getByRole('region', { name: 'Buku dipilih di slot' })).getByRole('button', { name: 'Keluarkan' }));
+    await waitFor(() => expect([1, 2, 3, 4].map((v) => useDataStore.getState().books.find((b) => b.volume === v)!.placement === null)).toEqual([true, false, true, false]));
+  });
+
+  test('"Pilih semua" checks every book on this layer', async () => {
+    const { user } = await filled();
+    await user.click(await within(slot()).findByRole('checkbox', { name: 'Pilih Naruto 2' }));
+    await user.click(within(within(slot()).getByRole('region', { name: 'Buku dipilih di slot' })).getByRole('button', { name: 'Pilih semua' }));
+    expect(within(slot()).getByRole('region', { name: 'Buku dipilih di slot' })).toHaveTextContent('4 dipilih');
+  });
+
+  test('books checked in one slot move to another slot with Taruh', async () => {
+    const { id, user } = await filled();
+    await user.click(await within(slot()).findByRole('checkbox', { name: 'Pilih Naruto 1' }));
+    await user.click(within(slot()).getByRole('checkbox', { name: 'Pilih Naruto 2' }));
+    // Books already in this slot do not count towards Taruh here.
+    expect(within(slot()).getByRole('button', { name: 'Taruh di lapis depan (0)' })).toBeDisabled();
+    act(() => useUiStore.getState().selectSlot({ shelfId: id, row: 0, col: 1 }));
+    const target = await screen.findByRole('region', { name: /Tingkat 1 · Kolom 2/ });
+    await user.click(within(target).getByRole('button', { name: 'Taruh di lapis depan (2)' }));
+    await waitFor(() =>
+      expect(useDataStore.getState().books.filter((b) => b.placement?.col === 1).map((b) => b.volume).sort()).toEqual([1, 2]),
+    );
+    expect(useDataStore.getState().books.filter((b) => b.placement?.col === 0).map((b) => b.placement!.order).sort()).toEqual([0, 1]);
+  });
+
+  test('the unplaced list counts books picked on a shelf too', async () => {
+    const { user } = await filled();
+    await user.click(await within(slot()).findByRole('checkbox', { name: 'Pilih Naruto 1' }));
+    expect(unplaced()).toHaveTextContent('1 dipilih');
+  });
 });
