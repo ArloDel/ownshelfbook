@@ -47,3 +47,48 @@ test('placedBookBoxes uses the row own columns', () => {
   const placed = placeBooks([b], [b.id], { shelfId: shelf.id, row: 0, col: 3 });
   expect(placedBookBoxes(placed, [shelf])).toHaveLength(1);
 });
+
+import { backBookDepth, backBookZ, backSpace, riserBox } from '../../src/ui/scene/layers';
+import { slotRect } from '../../src/domain/shelves';
+
+describe('back layer geometry', () => {
+  test('on a 30 cm shelf with a back panel, a 15 cm back book is drawn thinner so it never meets the front book', () => {
+    const shelf = createShelf('rak-buku', 'R');
+    const space = backSpace(shelf, 15);
+    expect(space.zMin).toBeCloseTo(-14.4);
+    expect(space.zMax).toBeCloseTo(-1.5);
+    const d = backBookDepth(15, space);
+    expect(d).toBeCloseTo(11.9);
+    expect(backBookZ(d, space) + d / 2).toBeLessThanOrEqual(space.zMax + 1e-9);
+  });
+
+  test('a deep shelf keeps the back comic at full depth', () => {
+    const shelf = createShelf('kubus', 'K');
+    expect(backBookDepth(13, backSpace(shelf, 13))).toBe(13);
+  });
+
+  test('no riser at 0 cm, and a riser never taller than the slot', () => {
+    const shelf = createShelf('kubus', 'K');
+    const slot = slotRect(shelf, 0, 0);
+    const space = backSpace(shelf, 13);
+    expect(riserBox(slot, space, 0)).toBeNull();
+    expect(riserBox(slot, space, 40)!.size[1]).toBe(slot.height);
+    expect(riserBox(slot, space, 5)!.position[1]).toBeCloseTo(slot.y + 2.5);
+  });
+
+  test('back-layer books stand on the riser; front books stay on the board', () => {
+    const shelf = createShelf('kubus', 'K');
+    const books = Array.from({ length: 30 }, () => createBook({ title: 'K', type: 'komik' }));
+    let placed = placeBooks(books, books.slice(0, 2).map((b) => b.id), { shelfId: shelf.id, row: 0, col: 0 });
+    // 24 comics overflow the 33 cm slot, so none of them leans.
+    placed = placeBooks(placed, books.slice(2, 26).map((b) => b.id), { shelfId: shelf.id, row: 0, col: 0 }, 'belakang');
+    const rect = slotRect(shelf, 0, 0);
+    const boxes = placedBookBoxes(placed, [shelf]);
+    const back = boxes.filter((p) => p.layer === 'belakang');
+    const front = boxes.filter((p) => p.layer === 'depan');
+    expect(back.length).toBeGreaterThan(0);
+    for (const p of back) expect(p.local[1] - p.size[1] / 2).toBeCloseTo(rect.y + 5);
+    for (const p of front.filter((x) => x.tilt === 0)) expect(p.local[1] - p.size[1] / 2).toBeCloseTo(rect.y);
+    expect(Math.max(...back.map((p) => p.local[2] + p.size[2] / 2))).toBeLessThan(Math.min(...front.map((p) => p.local[2] - p.size[2] / 2)));
+  });
+});
