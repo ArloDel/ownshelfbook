@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { parseBackup, toBackup } from '../domain/backup';
 import { createBook, createSeriesBooks, type NewBookInput, type NewSeriesInput } from '../domain/books';
 import {
+  fillLayer,
+  flowRight,
   layerOf,
   moveBooksToLayer as moveBooksToLayerDomain,
   moveInSlot as moveInSlotDomain,
@@ -52,6 +54,10 @@ export interface DataState {
   moveToLayer(id: string, layer: Layer): Promise<void>;
   /** Move several placed books to the end of `layer` in their own slots, keeping their order. */
   moveBooksToLayer(ids: string[], layer: Layer): Promise<void>;
+  /** Put books into one layer of a slot only as far as they fit; resolves to the ids that did not fit. */
+  fillSlot(ids: string[], slot: SlotRef, layer: Layer): Promise<string[]>;
+  /** Put books into the same layer of the slots to the right of `slot`; resolves to the ids still left. */
+  flowToRight(ids: string[], slot: SlotRef, layer: Layer): Promise<string[]>;
   unplaceBooks(ids: string[]): Promise<void>;
   moveInSlot(id: string, index: number): Promise<void>;
   setRoom(room: Room): Promise<void>;
@@ -285,6 +291,18 @@ export const createDataStore = () =>
 
       async moveToLayer(id, layer) {
         await commitBooks(moveToLayerDomain(get().books, id, layer));
+      },
+
+      async fillSlot(ids, slot, layer) {
+        const r = fillLayer(get().books, ids, shelfById(slot.shelfId), slot, layer);
+        if (r.placed.length) await commitBooks(r.books);
+        return r.rest;
+      },
+
+      async flowToRight(ids, slot, layer) {
+        const r = flowRight(get().books, ids, shelfById(slot.shelfId), slot, layer);
+        if (r.placed.length) await commitBooks(r.books);
+        return r.rest;
       },
 
       async moveBooksToLayer(ids, layer) {
