@@ -203,7 +203,8 @@ describe('when the back layer is full', () => {
     expect(inSlot(0, 'belakang')).toBe(22);
     await user.click(within(ask).getByRole('button', { name: 'Ke lapis depan' }));
     await waitFor(() => expect(inSlot(0, 'depan')).toBe(3), { timeout: 5000 });
-    expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument();
+    // The store shows the books before the save finishes; the question closes once it has.
+    await waitFor(() => expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument(), { timeout: 5000 });
   });
 
   test('the rest can go to the slot on the right', async () => {
