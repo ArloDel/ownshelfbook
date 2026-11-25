@@ -1,10 +1,13 @@
 import { migrateShelfV1 } from './shelves';
-import type { AppData, Book, Room, Shelf, ShelfV1 } from './types';
+import type { AppData, Book, Cover, Room, Shelf, ShelfV1 } from './types';
 
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
+/** Longest image (characters of its data URL) a backup may carry, ~220 KB: stops large photos coming in. */
+export const MAX_COVER_CHARS = 300_000;
 
 export function toBackup(d: AppData): string {
-  return JSON.stringify({ version: BACKUP_VERSION, room: d.room, shelves: d.shelves, books: d.books }, null, 2);
+  const body = { version: BACKUP_VERSION, room: d.room, shelves: d.shelves, books: d.books, ...(d.covers ? { covers: d.covers } : {}) };
+  return JSON.stringify(body, null, 2);
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -77,6 +80,13 @@ function checkBook(b: unknown, i: number): Book {
   return b as unknown as Book;
 }
 
+function checkCover(c: unknown, i: number): Cover {
+  const ok =
+    isObj(c) && isStr(c.key) && isStr(c.image) && c.image.startsWith('data:image/') && c.image.length <= MAX_COVER_CHARS;
+  if (!ok) fail(`gambar ke-${i + 1}`);
+  return { key: c.key as string, image: c.image as string };
+}
+
 export function parseBackup(text: string): AppData {
   let raw: unknown;
   try {
@@ -86,12 +96,14 @@ export function parseBackup(text: string): AppData {
   }
   if (!isObj(raw)) fail('format tidak dikenal');
   const version = raw.version;
-  if (version !== 1 && version !== BACKUP_VERSION) fail(`versi ${String(version)} tidak didukung`);
+  if (version !== 1 && version !== 2 && version !== BACKUP_VERSION) fail(`versi ${String(version)} tidak didukung`);
+  if (raw.covers !== undefined && !Array.isArray(raw.covers)) fail('daftar gambar');
   if (!Array.isArray(raw.shelves) || !Array.isArray(raw.books)) fail('daftar rak/buku tidak ada');
   return {
     room: checkRoom(raw.room),
     shelves: raw.shelves.map((sh, i) => checkShelf(sh, i, version as number)),
     books: raw.books.map(checkBook),
+    ...(Array.isArray(raw.covers) ? { covers: raw.covers.map(checkCover) } : {}),
   };
 }
 

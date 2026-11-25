@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { migrateShelfV1 } from '../domain/shelves';
-import type { Book, Room, Shelf, ShelfV1 } from '../domain/types';
+import type { Book, Cover, Room, Shelf, ShelfV1 } from '../domain/types';
 
 export const DEFAULT_ROOM: Room = { widthCm: 500, depthCm: 400, heightCm: 260 };
 
@@ -13,6 +13,7 @@ export const db = new Dexie('ownshelfbook') as Dexie & {
   books: EntityTable<Book, 'id'>;
   shelves: EntityTable<Shelf, 'id'>;
   meta: EntityTable<MetaRow, 'key'>;
+  covers: EntityTable<Cover, 'key'>;
 };
 
 const STORES = {
@@ -34,3 +35,6 @@ db.version(2)
         if (typeof shelf.colWidthsCm[0] === 'number') Object.assign(shelf, migrateShelfV1(shelf as ShelfV1));
       }),
   );
+
+// v3: series spine images.
+db.version(3).stores({ ...STORES, covers: 'key' });

@@ -19,7 +19,7 @@ test('rejects non-JSON', () => {
 
 test('rejects other versions', () => {
   const obj = JSON.parse(toBackup(data));
-  obj.version = 3;
+  obj.version = 99;
   expect(() => parseBackup(JSON.stringify(obj))).toThrow();
 });
 
@@ -45,8 +45,8 @@ test('backupFileName uses local date', () => {
   expect(backupFileName(new Date(2026, 10, 3))).toBe('ownshelfbook-backup-2026-11-03.json');
 });
 
-test('writes version 2', () => {
-  expect(JSON.parse(toBackup(data)).version).toBe(2);
+test('writes version 3', () => {
+  expect(JSON.parse(toBackup(data)).version).toBe(3);
 });
 
 test('v1 files are converted to per-row columns', () => {

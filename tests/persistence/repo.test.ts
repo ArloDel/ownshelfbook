@@ -37,5 +37,5 @@ test('replaceAll replaces everything', async () => {
   await saveShelves([createShelf('kubus', 'Old')]);
   const fresh = { room: DEFAULT_ROOM, shelves: [createShelf('rendah', 'New')], books: [createBook({ title: 'New', type: 'buku' })] };
   await replaceAll(fresh);
-  expect(await loadAll()).toEqual(fresh);
+  expect(await loadAll()).toEqual({ ...fresh, covers: [] });
 });

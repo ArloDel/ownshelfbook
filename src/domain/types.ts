@@ -63,8 +63,16 @@ export interface Room {
   heightCm: number;
 }
 
+/** A series spine image, stored as a data URL. `key` is the series (or the title of a book without one). */
+export interface Cover {
+  key: string;
+  image: string;
+}
+
 export interface AppData {
   room: Room;
   shelves: Shelf[];
   books: Book[];
+  /** Missing when a backup carries no images: the images already saved stay. */
+  covers?: Cover[];
 }
