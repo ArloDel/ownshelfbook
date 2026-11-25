@@ -1,10 +1,11 @@
 import { ArrowDown, ArrowLeftRight, ArrowUp, Crosshair, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { booksInSlot, slotUsage } from '../../domain/placement';
 import { canDoubleStack } from '../../domain/shelves';
-import type { Layer } from '../../domain/types';
+import type { Book, Layer } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { bookLabel } from '../common/labels';
@@ -12,13 +13,13 @@ import { bookLabel } from '../common/labels';
 export function SlotPanel() {
   const slot = useUiStore((s) => s.selectedSlot);
   const checked = useUiStore((s) => s.checkedBookIds);
-  const clearChecked = useUiStore((s) => s.clearChecked);
+  const setChecked = useUiStore((s) => s.setChecked);
   const focusShelf = useUiStore((s) => s.focusShelf);
   const chosenLayer = useUiStore((s) => s.slotLayer);
   const setSlotLayer = useUiStore((s) => s.setSlotLayer);
   const books = useDataStore((s) => s.books);
   const shelf = useDataStore((s) => s.shelves.find((x) => x.id === slot?.shelfId));
-  const { placeBooks, unplaceBooks, moveInSlot, moveToLayer } = useDataStore.getState();
+  const { placeBooks, unplaceBooks, moveInSlot, moveToLayer, moveBooksToLayer } = useDataStore.getState();
   const [placing, setPlacing] = useState(false);
 
   const valid = slot && shelf && slot.row < shelf.rowHeightsCm.length && slot.col < shelf.colWidthsCm[slot.row].length;
@@ -38,6 +39,18 @@ export function SlotPanel() {
   const list = booksInSlot(books, slot, layer);
   const otherCount = booksInSlot(books, slot, other).length;
   const usage = slotUsage(books, shelf, slot.row, slot.col, layer);
+  // One selection for the whole room: books picked here can be acted on here, or carried to another slot.
+  const checkedSet = new Set(checked);
+  const hereIds = new Set(list.map((b) => b.id));
+  const pickedHere = list.filter((b) => checkedSet.has(b.id)).map((b) => b.id);
+  const toPlace = checked.filter((id) => !hereIds.has(id));
+  const runs = seriesRuns(list);
+  const setPicked = (ids: string[], on: boolean) => {
+    const rest = checked.filter((id) => !ids.includes(id));
+    setChecked(on ? [...rest, ...ids] : rest);
+  };
+  // Read the selection fresh: this runs after an await, when `checked` may be stale.
+  const drop = (ids: string[]) => setChecked(useUiStore.getState().checkedBookIds.filter((id) => !ids.includes(id)));
   const pct = Math.min(100, (usage.usedCm / usage.capacityCm) * 100);
   const title = `${shelf.name} · Tingkat ${slot.row + 1} · Kolom ${slot.col + 1}`;
 
@@ -89,18 +102,18 @@ export function SlotPanel() {
       <div className="row">
         <Button
           className="grow"
-          disabled={checked.length === 0 || placing}
+          disabled={toPlace.length === 0 || placing}
           onClick={async () => {
             setPlacing(true);
             try {
-              await placeBooks(checked, slot, layer);
-              clearChecked();
+              await placeBooks(toPlace, slot, layer);
+              drop(toPlace);
             } finally {
               setPlacing(false);
             }
           }}
         >
-          {placing ? 'Menaruh…' : double ? `Taruh di lapis ${layer} (${checked.length})` : `Taruh di slot ini (${checked.length})`}
+          {placing ? 'Menaruh…' : double ? `Taruh di lapis ${layer} (${toPlace.length})` : `Taruh di slot ini (${toPlace.length})`}
         </Button>
         <Button variant="ghost" onClick={() => focusShelf(shelf.id)}>
           <Crosshair data-icon="inline-start" aria-hidden />
@@ -110,47 +123,119 @@ export function SlotPanel() {
 
       <h4>{double ? `Isi lapis ${layer}` : 'Isi slot'}</h4>
       {list.length === 0 && <p className="hint">{double ? `Lapis ${layer} masih kosong.` : 'Slot ini masih kosong.'}</p>}
-      <ol className="slot-list">
-        {list.map((b, i) => (
-          <li key={b.id} className="row">
-            <span className="swatch" style={{ background: b.color }} />
-            <span className="grow">{bookLabel(b)}</span>
-            <Button variant="ghost" size="icon-sm" disabled={i === 0} aria-label={`Naikkan ${bookLabel(b)}`} onClick={() => void moveInSlot(b.id, i - 1)}>
-              <ArrowUp aria-hidden />
+      {pickedHere.length > 0 && (
+        <section aria-label="Buku dipilih di slot" className="row checked-bar">
+          <span className="grow">{pickedHere.length} dipilih</span>
+          {pickedHere.length < list.length && (
+            <Button variant="ghost" size="sm" onClick={() => setPicked(list.map((b) => b.id), true)}>
+              Pilih semua
             </Button>
+          )}
+          {double && (
             <Button
               variant="ghost"
-              size="icon-sm"
-              disabled={i === list.length - 1}
-              aria-label={`Turunkan ${bookLabel(b)}`}
-              onClick={() => void moveInSlot(b.id, i + 1)}
+              size="sm"
+              onClick={async () => {
+                await moveBooksToLayer(pickedHere, other);
+                drop(pickedHere);
+              }}
             >
-              <ArrowDown aria-hidden />
+              Pindah ke {other}
             </Button>
-            {double && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Pindah ${bookLabel(b)} ke ${other}`}
-                title={`Pindah ke lapis ${other}`}
-                onClick={() => void moveToLayer(b.id, other)}
-              >
-                <ArrowLeftRight aria-hidden />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-destructive"
-              aria-label={`Keluarkan ${bookLabel(b)}`}
-              title="Keluarkan dari slot"
-              onClick={() => void unplaceBooks([b.id])}
-            >
-              <X aria-hidden />
-            </Button>
-          </li>
-        ))}
-      </ol>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={async () => {
+              await unplaceBooks(pickedHere);
+              drop(pickedHere);
+            }}
+          >
+            Keluarkan
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => drop(pickedHere)}>
+            Batal
+          </Button>
+        </section>
+      )}
+      {runs.map((run) => {
+        const ids = run.books.map((b) => b.id);
+        const count = ids.filter((id) => checkedSet.has(id)).length;
+        return (
+          <div key={run.key} className="slot-run">
+            <label className="row group-head">
+              <Checkbox
+                aria-label={`Pilih semua ${run.name}`}
+                checked={count === ids.length ? true : count > 0 ? 'indeterminate' : false}
+                onCheckedChange={(c) => setPicked(ids, c === true)}
+              />
+              <strong className="grow">{run.name}</strong>
+              <small>{ids.length}</small>
+            </label>
+            <ol className="slot-list">
+              {run.books.map((b) => {
+                const i = run.start + run.books.indexOf(b);
+                return (
+                  <li key={b.id} className="row">
+                    <Checkbox aria-label={`Pilih ${bookLabel(b)}`} checked={checkedSet.has(b.id)} onCheckedChange={(c) => setPicked([b.id], c === true)} />
+                    <span className="swatch" style={{ background: b.color }} />
+                    <span className="grow">{bookLabel(b)}</span>
+                    <Button variant="ghost" size="icon-sm" disabled={i === 0} aria-label={`Naikkan ${bookLabel(b)}`} onClick={() => void moveInSlot(b.id, i - 1)}>
+                      <ArrowUp aria-hidden />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={i === list.length - 1}
+                      aria-label={`Turunkan ${bookLabel(b)}`}
+                      onClick={() => void moveInSlot(b.id, i + 1)}
+                    >
+                      <ArrowDown aria-hidden />
+                    </Button>
+                    {double && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Pindah ${bookLabel(b)} ke ${other}`}
+                        title={`Pindah ke lapis ${other}`}
+                        onClick={() => void moveToLayer(b.id, other)}
+                      >
+                        <ArrowLeftRight aria-hidden />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label={`Keluarkan ${bookLabel(b)}`}
+                      title="Keluarkan dari slot"
+                      onClick={() => void unplaceBooks([b.id])}
+                    >
+                      <X aria-hidden />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        );
+      })}
     </section>
   );
+}
+
+/**
+ * Books in shelf order, split wherever the series changes. Keeping shelf order (not
+ * grouping a series together) keeps the up/down buttons meaning what they show.
+ */
+function seriesRuns(list: Book[]): { key: string; name: string; start: number; books: Book[] }[] {
+  const runs: { key: string; name: string; start: number; books: Book[] }[] = [];
+  list.forEach((b, i) => {
+    const name = b.series ?? b.title;
+    const last = runs[runs.length - 1];
+    if (last && last.name === name) last.books.push(b);
+    else runs.push({ key: `${name}-${i}`, name, start: i, books: [b] });
+  });
+  return runs;
 }
