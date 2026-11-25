@@ -183,9 +183,11 @@ describe('two layers', () => {
     r = placeBooks(r, [books[1].id, books[2].id], slotA, 'belakang');
     expect(slotUsage(r, shelf, 0, 0, 'depan').usedCm).toBe(1.5);
     expect(slotUsage(r, shelf, 0, 0, 'belakang').usedCm).toBe(3);
-    expect(slotUsage(r, { ...shelf, backRiserCm: 16 }, 0, 0, 'belakang').tooTall).toBe(true);
-    expect(slotUsage(r, { ...shelf, backRiserCm: 5 }, 0, 0, 'belakang').tooTall).toBe(false);
-    expect(slotUsage(r, { ...shelf, backRiserCm: 16 }, 0, 0, 'depan').tooTall).toBe(false);
+    // Row 0 is 22 cm: an 18 cm comic fits in front, but not on a 5 cm riser (17 cm left).
+    const low = { ...shelf, rowHeightsCm: [22, 33, 33, 33] };
+    expect(slotUsage(r, { ...low, backRiserCm: 5 }, 0, 0, 'belakang').tooTall).toBe(true);
+    expect(slotUsage(r, { ...low, backRiserCm: 4 }, 0, 0, 'belakang').tooTall).toBe(false);
+    expect(slotUsage(r, { ...low, backRiserCm: 5 }, 0, 0, 'depan').tooTall).toBe(false);
   });
 
   test('a shelf made shallower than 26 cm counts and returns only its back-layer books', () => {
