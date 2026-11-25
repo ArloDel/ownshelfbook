@@ -556,12 +556,25 @@
     min-width: 0;
     overflow: hidden;
   }
-  .spine-source img {
+  .spine-frame {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    vertical-align: top;
+  }
+  .spine-frame img {
     display: block;
-    width: 100%;
+    max-width: 100%;
     max-height: 220px;
-    object-fit: contain;
-    object-position: left top;
+    width: auto;
+    height: auto;
+  }
+  .spine-slider {
+    height: auto;
+    padding: 0;
+    border: 0;
+    accent-color: var(--primary);
   }
   .spine-window {
     position: absolute;

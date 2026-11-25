@@ -107,11 +107,14 @@ function SpineImageDialog({ name, onClose }: { name: string; onClose(): void }) 
           <div className="spine-compare">
             {sourceUrl && crop && img && (
               <div className="spine-source">
-                <img src={sourceUrl} alt="Gambar sumber" />
-                <span
-                  className="spine-window"
-                  style={{ left: `${(crop.sx / img.naturalWidth) * 100}%`, width: `${(crop.sw / img.naturalWidth) * 100}%` }}
-                />
+                {/* The frame is exactly the size of the shown picture, so the window lines up with it. */}
+                <span className="spine-frame">
+                  <img src={sourceUrl} alt="Gambar sumber" />
+                  <span
+                    className="spine-window"
+                    style={{ left: `${(crop.sx / img.naturalWidth) * 100}%`, width: `${(crop.sw / img.naturalWidth) * 100}%` }}
+                  />
+                </span>
               </div>
             )}
             <figure className="spine-preview">
@@ -124,7 +127,7 @@ function SpineImageDialog({ name, onClose }: { name: string; onClose(): void }) 
         {img && (
           <div className="field">
             <label htmlFor={sliderId}>Posisi potongan</label>
-            <input id={sliderId} type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} />
+            <input id={sliderId} type="range" className="spine-slider" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} />
           </div>
         )}
 
