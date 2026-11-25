@@ -208,3 +208,51 @@ describe('filling slots', () => {
     expect((await loadAll()).books.filter((b) => b.placement?.col === 3)).toHaveLength(22);
   });
 });
+
+describe('spine images', () => {
+  const img = 'data:image/webp;base64,AAA';
+
+  test('setCover is saved and loads into a fresh store; removeCover deletes it', async () => {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().setCover('Naruto', img);
+    const fresh = createDataStore();
+    await fresh.getState().hydrate();
+    expect(fresh.getState().covers).toEqual({ Naruto: img });
+    await fresh.getState().removeCover('Naruto');
+    expect(fresh.getState().covers).toEqual({});
+    expect((await loadAll()).covers).toEqual([]);
+  });
+
+  test('export then import brings the images back', async () => {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().setCover('Naruto', img);
+    const text = s.getState().exportData();
+    await s.getState().removeCover('Naruto');
+    await s.getState().importData(text);
+    expect(s.getState().covers).toEqual({ Naruto: img });
+  });
+
+  test('importing an older backup without images keeps the images', async () => {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().setCover('Naruto', img);
+    const old = JSON.parse(s.getState().exportData());
+    old.version = 2;
+    delete old.covers;
+    await s.getState().importData(JSON.stringify(old));
+    expect(s.getState().covers).toEqual({ Naruto: img });
+    expect((await loadAll()).covers).toHaveLength(1);
+  });
+
+  test('an image outlives its books and shows again when the series comes back', async () => {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().addSeries({ series: 'Naruto', type: 'komik', from: 1, to: 2 });
+    await s.getState().setCover('Naruto', img);
+    await s.getState().deleteBooks(s.getState().books.map((b) => b.id));
+    await s.getState().addSeries({ series: 'Naruto', type: 'komik', from: 1, to: 1 });
+    expect(s.getState().covers.Naruto).toBe(img);
+  });
+});
