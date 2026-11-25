@@ -115,3 +115,50 @@ test('shelf width sets the inner width', async () => {
   await waitFor(() => expect(useDataStore.getState().shelves[0].innerWidthCm).toBe(96));
   expect(cols(2)).toEqual([96]);
 });
+
+describe('back layer settings', () => {
+  async function kubusWithBack() {
+    const id = await useDataStore.getState().addShelf('kubus');
+    const books = await useDataStore.getState().addSeries({ series: 'Y', type: 'komik', from: 1, to: 3 });
+    await useDataStore.getState().placeBooks([books[0].id], { shelfId: id, row: 0, col: 0 });
+    await useDataStore.getState().placeBooks([books[1].id, books[2].id], { shelfId: id, row: 0, col: 0 }, 'belakang');
+    useUiStore.setState({ selectedShelfId: id, mode: 'tata' });
+    const user = userEvent.setup();
+    render(<ShelfPanel />);
+    return { id, user, books };
+  }
+  const kubus = () => useDataStore.getState().shelves[0];
+
+  test('the riser height shows on a deep shelf and can be changed', async () => {
+    const { user } = await kubusWithBack();
+    const field = screen.getByLabelText('Penyangga belakang');
+    expect(field).toHaveValue('5');
+    await user.clear(field);
+    await user.type(field, '8{Enter}');
+    await waitFor(() => expect(kubus().backRiserCm).toBe(8));
+  });
+
+  test('a wall shelf has no riser setting', async () => {
+    const id = await useDataStore.getState().addShelf('dinding');
+    useUiStore.setState({ selectedShelfId: id, mode: 'tata' });
+    render(<ShelfPanel />);
+    expect(screen.queryByLabelText('Penyangga belakang')).not.toBeInTheDocument();
+  });
+
+  test('making the shelf too shallow asks first; cancel keeps it, confirm returns the back layer', async () => {
+    const { user, books } = await kubusWithBack();
+    const depth = () => screen.getByLabelText('Kedalaman');
+    await user.clear(depth());
+    await user.type(depth(), '20{Enter}');
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('2 buku akan dikembalikan ke Belum ditata');
+    await user.click(within(dialog).getByRole('button', { name: 'Batal' }));
+    expect(kubus().depthCm).toBe(35);
+    await user.clear(depth());
+    await user.type(depth(), '20{Enter}');
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Kurangi' }));
+    await waitFor(() => expect(kubus().depthCm).toBe(20));
+    const placement = (i: number) => useDataStore.getState().books.find((b) => b.id === books[i].id)!.placement;
+    expect([placement(0) !== null, placement(1), placement(2)]).toEqual([true, null, null]);
+  });
+});
