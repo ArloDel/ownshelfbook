@@ -71,3 +71,9 @@ test('a picture can be pasted', async () => {
   fireEvent.paste(within(dialog).getByText(/tempel \(Ctrl\+V\)/), { clipboardData: { files: [png()] } });
   expect(await within(dialog).findByAltText('Pratinjau punggung')).toBeInTheDocument();
 });
+
+test('Ctrl+V works anywhere in the dialog, not only on the drop area', async () => {
+  const { dialog } = await openDialog();
+  fireEvent.paste(dialog, { clipboardData: { files: [png()] } });
+  expect(await within(dialog).findByAltText('Pratinjau punggung')).toBeInTheDocument();
+});

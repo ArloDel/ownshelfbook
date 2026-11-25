@@ -256,3 +256,11 @@ describe('spine images', () => {
     expect(s.getState().covers.Naruto).toBe(img);
   });
 });
+
+test('an image too big for a backup is refused when saving, so every export can be restored', async () => {
+  const s = createDataStore();
+  await s.getState().hydrate();
+  const huge = 'data:image/png;base64,' + 'A'.repeat(300_001);
+  await expect(s.getState().setCover('Naruto', huge)).rejects.toThrow('Gambar terlalu besar');
+  expect(s.getState().covers).toEqual({});
+});

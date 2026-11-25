@@ -116,3 +116,20 @@ describe('spine images in 3D', () => {
     expect(spineLabelText(vol, false)).toBe('Naruto 12');
   });
 });
+
+import { volumeFontSize } from '../../src/ui/scene/covers3d';
+
+test('a highlighted book is drawn without its picture so the yellow highlight shows', () => {
+  const shelf = createShelf('kubus', 'K');
+  const books = Array.from({ length: 2 }, (_, i) => createBook({ title: 'Naruto', series: 'Naruto', volume: i + 1, type: 'komik' }));
+  const placed = placedBookBoxes(placeBooks(books, books.map((b) => b.id), { shelfId: shelf.id, row: 0, col: 0 }), [shelf]);
+  const { plain, covered } = splitByCover(placed, { Naruto: 'data:image/webp;base64,A' }, books[1].id);
+  expect(plain.map((p) => p.book.volume)).toEqual([2]);
+  expect(covered.get('Naruto')!.map((p) => p.book.volume)).toEqual([1]);
+});
+
+test('volume numbers shrink with their digits so they stay on a thin spine', () => {
+  expect(volumeFontSize(1.44, '7')).toBeCloseTo(1.152);
+  expect(volumeFontSize(1.44, '12') * 2 * 0.6).toBeLessThanOrEqual(1.44 * 0.9);
+  expect(volumeFontSize(10, '3')).toBe(2.2);
+});

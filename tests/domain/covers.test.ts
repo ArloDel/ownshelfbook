@@ -23,3 +23,7 @@ test('a narrow picture is used whole, and the strip is never thinner than 16 px'
   expect([narrow.sw, narrow.sx]).toEqual([50, 0]);
   expect(spineCrop(1000, 1500, 0.01, 0.5).outW).toBe(16);
 });
+
+test('a very thick book never makes the strip wider than half its height', () => {
+  expect(spineCrop(1000, 1500, 2, 0.5).outW).toBe(256);
+});
