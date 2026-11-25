@@ -78,7 +78,13 @@ export function SlotPanel() {
         {usage.usedCm} / {usage.capacityCm} cm terisi · {list.length} buku
       </p>
       {usage.overflow && <p className="warn">Meluap: sebagian buku tidak muat dan tidak tampil di 3D.</p>}
-      {usage.tooTall && <p className="warn">Ada buku lebih tinggi dari tingkat ini.</p>}
+      {usage.tooTall && (
+        <p className="warn">
+          {layer === 'belakang'
+            ? 'Ada buku lebih tinggi dari ruang di atas penyangga. Turunkan penyangga di panel rak.'
+            : 'Ada buku lebih tinggi dari tingkat ini.'}
+        </p>
+      )}
 
       <div className="row">
         <Button
@@ -94,7 +100,7 @@ export function SlotPanel() {
             }
           }}
         >
-          {placing ? 'Menaruh…' : `Taruh di slot ini (${checked.length})`}
+          {placing ? 'Menaruh…' : double ? `Taruh di lapis ${layer} (${checked.length})` : `Taruh di slot ini (${checked.length})`}
         </Button>
         <Button variant="ghost" onClick={() => focusShelf(shelf.id)}>
           <Crosshair data-icon="inline-start" aria-hidden />
