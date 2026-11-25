@@ -92,3 +92,27 @@ describe('back layer geometry', () => {
     expect(Math.max(...back.map((p) => p.local[2] + p.size[2] / 2))).toBeLessThan(Math.min(...front.map((p) => p.local[2] - p.size[2] / 2)));
   });
 });
+
+import { splitByCover, spineLabelText } from '../../src/ui/scene/covers3d';
+
+describe('spine images in 3D', () => {
+  test('books of a series with an image are drawn apart from the rest', () => {
+    const shelf = createShelf('kubus', 'K');
+    const naruto = Array.from({ length: 3 }, (_, i) => createBook({ title: 'Naruto', series: 'Naruto', volume: i + 1, type: 'komik' }));
+    const bleach = Array.from({ length: 2 }, (_, i) => createBook({ title: 'Bleach', series: 'Bleach', volume: i + 1, type: 'komik' }));
+    const all = [...naruto, ...bleach];
+    const placed = placedBookBoxes(placeBooks(all, all.map((b) => b.id), { shelfId: shelf.id, row: 0, col: 0 }), [shelf]);
+    const { plain, covered } = splitByCover(placed, { Naruto: 'data:image/webp;base64,A' });
+    expect(plain.map((p) => p.book.series)).toEqual(['Bleach', 'Bleach']);
+    expect(covered.get('Naruto')!.map((p) => p.book.volume)).toEqual([1, 2, 3]);
+    expect(covered.has('Bleach')).toBe(false);
+  });
+
+  test('a book with an image shows its volume number; others keep their title', () => {
+    const vol = createBook({ title: 'Naruto', series: 'Naruto', volume: 12, type: 'komik' });
+    const single = createBook({ title: 'Laskar Pelangi', type: 'buku' });
+    expect(spineLabelText(vol, true)).toBe('12');
+    expect(spineLabelText(single, true)).toBe('Laskar Pelangi');
+    expect(spineLabelText(vol, false)).toBe('Naruto 12');
+  });
+});
