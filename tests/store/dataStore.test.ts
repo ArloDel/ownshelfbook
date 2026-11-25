@@ -171,3 +171,16 @@ describe('two layers', () => {
     expect(s.getState().shelves.find((x) => x.id === shallow.id)!.backRiserCm).toBe(15);
   });
 });
+
+test('moveBooksToLayer moves and saves several books at once', async () => {
+  const s = createDataStore();
+  await s.getState().hydrate();
+  await s.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 3 });
+  const id = await s.getState().addShelf('kubus');
+  const ids = s.getState().books.map((b) => b.id);
+  await s.getState().placeBooks(ids, { shelfId: id, row: 0, col: 0 });
+  await s.getState().moveBooksToLayer([ids[0], ids[2]], 'belakang');
+  const saved = (await loadAll()).books;
+  const layer = (x: string) => saved.find((b) => b.id === x)!.placement!.layer;
+  expect(ids.map(layer)).toEqual(['belakang', 'depan', 'belakang']);
+});
