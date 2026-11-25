@@ -2,7 +2,9 @@ import { createBook } from '../../src/domain/books';
 import {
   booksInSlot,
   countBooksOutside,
+  layerOf,
   moveInSlot,
+  moveToLayer,
   normalizeOrders,
   placeBooks,
   returnBooksOutside,
@@ -123,4 +125,77 @@ test('shrinking one row only unplaces books in that row removed columns', () => 
   const next = setColumnCount(s, 1, 2);
   expect(countBooksOutside(books, next)).toBe(1);
   expect(returnBooksOutside(books, next).map((x) => x.placement === null)).toEqual([true, false, false]);
+});
+
+describe('two layers', () => {
+  const vols = (books: Book[], layer: 'depan' | 'belakang') => booksInSlot(books, slotA, layer).map((b) => b.volume);
+  const ord = (books: Book[], layer: 'depan' | 'belakang') => booksInSlot(books, slotA, layer).map((b) => b.placement!.order);
+
+  test('the back layer keeps its own order, apart from the front', () => {
+    const books = komik(4);
+    let r = placeBooks(books, [books[0].id, books[1].id], slotA);
+    r = placeBooks(r, [books[2].id, books[3].id], slotA, 'belakang');
+    expect(vols(r, 'depan')).toEqual([1, 2]);
+    expect(ord(r, 'depan')).toEqual([0, 1]);
+    expect(vols(r, 'belakang')).toEqual([3, 4]);
+    expect(ord(r, 'belakang')).toEqual([0, 1]);
+    expect(r[2].placement!.layer).toBe('belakang');
+  });
+
+  test('a placement without a layer reads as the front layer', () => {
+    const [b] = komik(1);
+    const old = { ...b, placement: { ...slotA, order: 0 } };
+    expect(layerOf(old.placement)).toBe('depan');
+    expect(booksInSlot([old], slotA, 'depan')).toEqual([old]);
+    expect(booksInSlot([old], slotA, 'belakang')).toEqual([]);
+  });
+
+  test('moveToLayer sends a book to the end of the other layer and closes the gap', () => {
+    const books = komik(4);
+    let r = placeBooks(books, [books[0].id, books[1].id, books[2].id], slotA);
+    r = placeBooks(r, [books[3].id], slotA, 'belakang');
+    r = moveToLayer(r, books[0].id, 'belakang');
+    expect(vols(r, 'belakang')).toEqual([4, 1]);
+    expect(ord(r, 'belakang')).toEqual([0, 1]);
+    expect(vols(r, 'depan')).toEqual([2, 3]);
+    expect(ord(r, 'depan')).toEqual([0, 1]);
+  });
+
+  test('moveToLayer leaves unplaced books and same-layer moves alone', () => {
+    const books = komik(2);
+    expect(moveToLayer(books, books[0].id, 'belakang')).toBe(books);
+    const r = placeBooks(books, [books[1].id], slotA);
+    expect(moveToLayer(r, books[1].id, 'depan')).toBe(r);
+  });
+
+  test('moveInSlot reorders within the back layer only', () => {
+    const books = komik(4);
+    let r = placeBooks(books, [books[0].id, books[1].id], slotA);
+    r = placeBooks(r, [books[2].id, books[3].id], slotA, 'belakang');
+    r = moveInSlot(r, books[3].id, 0);
+    expect(vols(r, 'belakang')).toEqual([4, 3]);
+    expect(vols(r, 'depan')).toEqual([1, 2]);
+  });
+
+  test('slotUsage counts one layer; the back layer loses the riser height', () => {
+    const books = komik(3);
+    let r = placeBooks(books, [books[0].id], slotA);
+    r = placeBooks(r, [books[1].id, books[2].id], slotA, 'belakang');
+    expect(slotUsage(r, shelf, 0, 0, 'depan').usedCm).toBe(1.5);
+    expect(slotUsage(r, shelf, 0, 0, 'belakang').usedCm).toBe(3);
+    expect(slotUsage(r, { ...shelf, backRiserCm: 16 }, 0, 0, 'belakang').tooTall).toBe(true);
+    expect(slotUsage(r, { ...shelf, backRiserCm: 5 }, 0, 0, 'belakang').tooTall).toBe(false);
+    expect(slotUsage(r, { ...shelf, backRiserCm: 16 }, 0, 0, 'depan').tooTall).toBe(false);
+  });
+
+  test('a shelf made shallower than 26 cm counts and returns only its back-layer books', () => {
+    const books = komik(4);
+    let r = placeBooks(books, [books[0].id, books[1].id], slotA);
+    r = placeBooks(r, [books[2].id, books[3].id], slotA, 'belakang');
+    expect(countBooksOutside(r, { ...shelf, depthCm: 20 })).toBe(2);
+    expect(countBooksOutside(r, { ...shelf, depthCm: 30 })).toBe(0);
+    const back = returnBooksOutside(r, { ...shelf, depthCm: 20 });
+    expect(back.filter((b) => b.placement === null).map((b) => b.volume)).toEqual([3, 4]);
+    expect(vols(back, 'depan')).toEqual([1, 2]);
+  });
 });
