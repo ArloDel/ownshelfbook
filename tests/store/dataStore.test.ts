@@ -184,3 +184,27 @@ test('moveBooksToLayer moves and saves several books at once', async () => {
   const layer = (x: string) => saved.find((b) => b.id === x)!.placement!.layer;
   expect(ids.map(layer)).toEqual(['belakang', 'depan', 'belakang']);
 });
+
+describe('filling slots', () => {
+  async function store(n: number) {
+    const s = createDataStore();
+    await s.getState().hydrate();
+    await s.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: n });
+    const id = await s.getState().addShelf('kubus');
+    return { s, id, ids: s.getState().books.map((b) => b.id) };
+  }
+
+  test('fillSlot saves what fits and returns the rest', async () => {
+    const { s, id, ids } = await store(25);
+    const rest = await s.getState().fillSlot(ids, { shelfId: id, row: 0, col: 0 }, 'belakang');
+    expect(rest).toEqual(ids.slice(22));
+    expect((await loadAll()).books.filter((b) => b.placement?.layer === 'belakang')).toHaveLength(22);
+  });
+
+  test('flowToRight saves into the next slots and returns what is left', async () => {
+    const { s, id, ids } = await store(30);
+    const rest = await s.getState().flowToRight(ids, { shelfId: id, row: 0, col: 2 }, 'belakang');
+    expect(rest).toEqual(ids.slice(22));
+    expect((await loadAll()).books.filter((b) => b.placement?.col === 3)).toHaveLength(22);
+  });
+});
