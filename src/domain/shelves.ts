@@ -245,3 +245,22 @@ export function overlappingIds(shelves: Shelf[]): Set<string> {
   }
   return ids;
 }
+
+/** A slot holds a back layer only when the shelf is deep enough for two comics. */
+export const MIN_DOUBLE_DEPTH_CM = 26;
+export const DEFAULT_RISER_CM = 5;
+export const MAX_RISER_CM = 15;
+
+export function canDoubleStack(shelf: Pick<Shelf, 'depthCm'>): boolean {
+  return shelf.depthCm >= MIN_DOUBLE_DEPTH_CM;
+}
+
+/** Riser height to 0–15 cm in 0.5 cm steps; anything that is not a number becomes the default. */
+export function clampRiser(v: number): number {
+  if (!Number.isFinite(v)) return DEFAULT_RISER_CM;
+  return Math.min(MAX_RISER_CM, Math.max(0, Math.round(v * 2) / 2));
+}
+
+export function riserOf(shelf: Pick<Shelf, 'backRiserCm'>): number {
+  return shelf.backRiserCm === undefined ? DEFAULT_RISER_CM : clampRiser(shelf.backRiserCm);
+}

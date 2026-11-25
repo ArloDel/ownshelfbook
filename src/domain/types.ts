@@ -1,5 +1,8 @@
 export type BookType = 'komik' | 'buku';
 
+/** Which row of books in a slot: the front one, or the back one on a riser. */
+export type Layer = 'depan' | 'belakang';
+
 export type ShelfModel = 'rak-buku' | 'kubus' | 'dinding' | 'rendah';
 
 export interface Book {
@@ -18,6 +21,8 @@ export interface Book {
     row: number;
     col: number;
     order: number;
+    /** Missing on older data: read it as 'depan'. */
+    layer?: Layer;
   };
   createdAt: number;
 }
@@ -45,6 +50,8 @@ export interface Shelf {
   depthCm: number;
   boardThicknessCm: number;
   color: string;
+  /** Height (cm) of the riser the back layer stands on. Missing = 5. */
+  backRiserCm?: number;
 }
 
 /** Shelf as stored before per-row columns (DB v1, backup v1). */
