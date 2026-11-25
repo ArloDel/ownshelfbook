@@ -182,3 +182,49 @@ describe('selecting books in a slot', () => {
     expect(unplaced()).toHaveTextContent('1 dipilih');
   });
 });
+
+describe('when the back layer is full', () => {
+  async function overfill(n: number, col = 0) {
+    const ctx = await setup(n);
+    useUiStore.setState({ slotLayer: 'belakang', selectedSlot: { shelfId: ctx.id, row: 0, col } });
+    await ctx.user.click(within(unplaced()).getByRole('checkbox', { name: 'Pilih semua Naruto' }));
+    const region = () => screen.getByRole('region', { name: new RegExp(`Tingkat 1 · Kolom ${col + 1}`) });
+    await ctx.user.click(within(region()).getByRole('button', { name: `Taruh di lapis belakang (${n})` }));
+    return { ...ctx, region };
+  }
+  const inSlot = (col: number, layer: string) =>
+    useDataStore.getState().books.filter((b) => b.placement?.col === col && b.placement.layer === layer).length;
+
+  test('only what fits goes in, then the rest can go to the front', async () => {
+    const { user, region } = await overfill(25);
+    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' });
+    expect(ask).toHaveTextContent('Lapis belakang penuh. 3 buku belum tertaruh.');
+    expect(inSlot(0, 'belakang')).toBe(22);
+    await user.click(within(ask).getByRole('button', { name: 'Ke lapis depan' }));
+    await waitFor(() => expect(inSlot(0, 'depan')).toBe(3));
+    expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument();
+  });
+
+  test('the rest can go to the slot on the right', async () => {
+    const { user, region } = await overfill(25);
+    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' })).getByRole('button', { name: 'Ke slot sebelah' }));
+    await waitFor(() => expect(inSlot(1, 'belakang')).toBe(3));
+  });
+
+  test('"Biarkan" leaves the rest unplaced and still picked', async () => {
+    const { user, region } = await overfill(25);
+    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' })).getByRole('button', { name: 'Biarkan' }));
+    expect(useDataStore.getState().books.filter((b) => b.placement === null)).toHaveLength(3);
+    expect(useUiStore.getState().checkedBookIds).toHaveLength(3);
+    expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument();
+  });
+
+  test('in the last column, after the front fills too, it says the books do not fit in this tier', async () => {
+    const { user, region } = await overfill(50, 3);
+    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' });
+    expect(within(ask).queryByRole('button', { name: 'Ke slot sebelah' })).not.toBeInTheDocument();
+    await user.click(within(ask).getByRole('button', { name: 'Ke lapis depan' }));
+    await waitFor(() => expect(within(region()).getByRole('region', { name: 'Sisa buku' })).toHaveTextContent('6 buku tidak muat di tingkat ini.'));
+    expect(within(within(region()).getByRole('region', { name: 'Sisa buku' })).queryByRole('button', { name: /Ke / })).not.toBeInTheDocument();
+  });
+});
