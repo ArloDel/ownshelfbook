@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { layerOf } from '../domain/placement';
 import { searchBooks } from '../domain/search';
 import type { Book } from '../domain/types';
 import { useDataStore } from '../store/dataStore';
@@ -22,7 +23,7 @@ export function SearchBox() {
     ui.setPage('room');
     if (b.placement) {
       ui.setMode('isi');
-      ui.selectSlot({ shelfId: b.placement.shelfId, row: b.placement.row, col: b.placement.col });
+      ui.selectSlot({ shelfId: b.placement.shelfId, row: b.placement.row, col: b.placement.col }, layerOf(b.placement));
       ui.focusBook(b.id, b.placement.shelfId);
     } else {
       ui.setUnplacedFilter(bookLabel(b));

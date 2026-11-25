@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SlotRef } from '../domain/types';
+import type { Layer, SlotRef } from '../domain/types';
 
 export type Page = 'room' | 'collection';
 export type Mode = 'tata' | 'isi';
@@ -9,6 +9,8 @@ export interface UiState {
   mode: Mode;
   selectedShelfId: string | null;
   selectedSlot: SlotRef | null;
+  /** Which layer of the selected slot the slot panel shows and places into. */
+  slotLayer: Layer;
   checkedBookIds: string[];
   highlightBookId: string | null;
   focusShelfId: string | null;
@@ -16,7 +18,8 @@ export interface UiState {
   setPage(page: Page): void;
   setMode(mode: Mode): void;
   selectShelf(id: string | null): void;
-  selectSlot(slot: SlotRef | null): void;
+  selectSlot(slot: SlotRef | null, layer?: Layer): void;
+  setSlotLayer(layer: Layer): void;
   toggleChecked(id: string): void;
   setChecked(ids: string[]): void;
   clearChecked(): void;
@@ -31,6 +34,7 @@ export const createUiStore = () =>
     mode: 'tata',
     selectedShelfId: null,
     selectedSlot: null,
+    slotLayer: 'depan',
     checkedBookIds: [],
     highlightBookId: null,
     focusShelfId: null,
@@ -38,7 +42,9 @@ export const createUiStore = () =>
     setPage: (page) => set({ page }),
     setMode: (mode) => set({ mode, selectedSlot: null }),
     selectShelf: (selectedShelfId) => set({ selectedShelfId }),
-    selectSlot: (selectedSlot) => set({ selectedSlot, selectedShelfId: selectedSlot?.shelfId ?? get().selectedShelfId }),
+    selectSlot: (selectedSlot, slotLayer = 'depan') =>
+      set({ selectedSlot, slotLayer, selectedShelfId: selectedSlot?.shelfId ?? get().selectedShelfId }),
+    setSlotLayer: (slotLayer) => set({ slotLayer }),
     toggleChecked: (id) => {
       const ids = get().checkedBookIds;
       set({ checkedBookIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] });
