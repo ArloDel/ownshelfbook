@@ -43,7 +43,8 @@ function checkShelf(s: unknown, i: number, version: number): Shelf {
         s.colWidthsCm.every(isNumList)) &&
     isNum(s.depthCm) &&
     isNum(s.boardThicknessCm) &&
-    isStr(s.color);
+    isStr(s.color) &&
+    (s.backRiserCm === undefined || isNum(s.backRiserCm));
   if (!ok) fail(`rak ke-${i + 1}`);
   return version === 1 ? migrateShelfV1(s as unknown as ShelfV1) : (s as unknown as Shelf);
 }
@@ -52,7 +53,12 @@ function checkBook(b: unknown, i: number): Book {
   const p = isObj(b) ? b.placement : undefined;
   const placementOk =
     p === null ||
-    (isObj(p) && isStr(p.shelfId) && isNum(p.row) && isNum(p.col) && isNum(p.order));
+    (isObj(p) &&
+      isStr(p.shelfId) &&
+      isNum(p.row) &&
+      isNum(p.col) &&
+      isNum(p.order) &&
+      (p.layer === undefined || p.layer === 'depan' || p.layer === 'belakang'));
   const ok =
     isObj(b) &&
     isStr(b.id) &&

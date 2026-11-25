@@ -2,14 +2,18 @@ import { create } from 'zustand';
 import { parseBackup, toBackup } from '../domain/backup';
 import { createBook, createSeriesBooks, type NewBookInput, type NewSeriesInput } from '../domain/books';
 import {
+  layerOf,
   moveInSlot as moveInSlotDomain,
+  moveToLayer as moveToLayerDomain,
   normalizeOrders,
   placeBooks as placeBooksDomain,
   returnBooksOutside,
   unplaceBooks as unplaceBooksDomain,
 } from '../domain/placement';
 import {
+  canDoubleStack,
   clampDim,
+  clampRiser,
   clampShelfToRoom,
   createShelf,
   fitRow,
@@ -17,7 +21,7 @@ import {
   MAX_ROWS_COLS,
   minInnerWidth,
 } from '../domain/shelves';
-import type { AppData, Book, Room, Shelf, ShelfModel, SlotRef } from '../domain/types';
+import type { AppData, Book, Layer, Room, Shelf, ShelfModel, SlotRef } from '../domain/types';
 import { DEFAULT_ROOM } from '../persistence/db';
 import * as repo from '../persistence/repo';
 
@@ -42,7 +46,9 @@ export interface DataState {
   reshapeShelf(id: string, shape: Shelf): Promise<void>;
   duplicateShelf(id: string): Promise<string>;
   deleteShelf(id: string): Promise<void>;
-  placeBooks(ids: string[], slot: SlotRef): Promise<void>;
+  placeBooks(ids: string[], slot: SlotRef, layer?: Layer): Promise<void>;
+  /** Move a placed book to the end of the other layer of its slot. */
+  moveToLayer(id: string, layer: Layer): Promise<void>;
   unplaceBooks(ids: string[]): Promise<void>;
   moveInSlot(id: string, index: number): Promise<void>;
   setRoom(room: Room): Promise<void>;
@@ -92,6 +98,7 @@ function sanitizeShelf(s: Shelf, room: Room): Shelf {
       ...s,
       ...sanitizeShape(s),
       depthCm: clampDim(s.depthCm),
+      ...(s.backRiserCm !== undefined ? { backRiserCm: clampRiser(s.backRiserCm) } : {}),
       elevationCm: elevation,
       rotationY: rotation,
       position: {
@@ -118,6 +125,7 @@ function normaliseImport(d: AppData): AppData {
     const s = byId.get(p.shelfId);
     const valid =
       s &&
+      (layerOf(p) === 'depan' || canDoubleStack(s)) &&
       Number.isInteger(p.row) &&
       Number.isInteger(p.col) &&
       p.row >= 0 &&
@@ -268,8 +276,12 @@ export const createDataStore = () =>
         });
       },
 
-      async placeBooks(ids, slot) {
-        await commitBooks(placeBooksDomain(get().books, ids, slot));
+      async placeBooks(ids, slot, layer = 'depan') {
+        await commitBooks(placeBooksDomain(get().books, ids, slot, layer));
+      },
+
+      async moveToLayer(id, layer) {
+        await commitBooks(moveToLayerDomain(get().books, id, layer));
       },
 
       async unplaceBooks(ids) {
