@@ -3,6 +3,7 @@ import { parseBackup, toBackup } from '../domain/backup';
 import { createBook, createSeriesBooks, type NewBookInput, type NewSeriesInput } from '../domain/books';
 import {
   layerOf,
+  moveBooksToLayer as moveBooksToLayerDomain,
   moveInSlot as moveInSlotDomain,
   moveToLayer as moveToLayerDomain,
   normalizeOrders,
@@ -49,6 +50,8 @@ export interface DataState {
   placeBooks(ids: string[], slot: SlotRef, layer?: Layer): Promise<void>;
   /** Move a placed book to the end of the other layer of its slot. */
   moveToLayer(id: string, layer: Layer): Promise<void>;
+  /** Move several placed books to the end of `layer` in their own slots, keeping their order. */
+  moveBooksToLayer(ids: string[], layer: Layer): Promise<void>;
   unplaceBooks(ids: string[]): Promise<void>;
   moveInSlot(id: string, index: number): Promise<void>;
   setRoom(room: Room): Promise<void>;
@@ -282,6 +285,10 @@ export const createDataStore = () =>
 
       async moveToLayer(id, layer) {
         await commitBooks(moveToLayerDomain(get().books, id, layer));
+      },
+
+      async moveBooksToLayer(ids, layer) {
+        await commitBooks(moveBooksToLayerDomain(get().books, ids, layer));
       },
 
       async unplaceBooks(ids) {
