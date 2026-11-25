@@ -14,7 +14,7 @@ beforeEach(async () => {
   original = useDataStore.getState();
 });
 afterEach(() => {
-  useDataStore.setState({ addSeries: original.addSeries, placeBooks: original.placeBooks });
+  useDataStore.setState({ addSeries: original.addSeries, fillSlot: original.fillSlot });
 });
 
 test('series form shows a saving state while the store works', async () => {
@@ -31,7 +31,7 @@ test('series form shows a saving state while the store works', async () => {
 test('place button shows a placing state', async () => {
   const id = await original.addShelf('kubus');
   const [b] = await useDataStore.getState().addSeries({ series: 'X', type: 'komik', from: 1, to: 1 });
-  useDataStore.setState({ placeBooks: never });
+  useDataStore.setState({ fillSlot: never });
   useUiStore.setState({ mode: 'isi', selectedSlot: { shelfId: id, row: 0, col: 0 }, checkedBookIds: [b.id] });
   const user = userEvent.setup();
   render(<SlotPanel />);

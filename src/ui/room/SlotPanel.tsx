@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { booksInSlot, slotUsage } from '../../domain/placement';
+import { booksInSlot, hasSlotRight, slotUsage } from '../../domain/placement';
 import { canDoubleStack } from '../../domain/shelves';
 import type { Book, Layer } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
@@ -19,8 +19,10 @@ export function SlotPanel() {
   const setSlotLayer = useUiStore((s) => s.setSlotLayer);
   const books = useDataStore((s) => s.books);
   const shelf = useDataStore((s) => s.shelves.find((x) => x.id === slot?.shelfId));
-  const { placeBooks, unplaceBooks, moveInSlot, moveToLayer, moveBooksToLayer } = useDataStore.getState();
+  const { fillSlot, flowToRight, unplaceBooks, moveInSlot, moveToLayer, moveBooksToLayer } = useDataStore.getState();
   const [placing, setPlacing] = useState(false);
+  // Books that did not fit the last time Taruh ran in this slot, and the ways still open for them.
+  const [leftover, setLeftover] = useState<Leftover | null>(null);
 
   const valid = slot && shelf && slot.row < shelf.rowHeightsCm.length && slot.col < shelf.colWidthsCm[slot.row].length;
   if (!valid) {
@@ -45,6 +47,17 @@ export function SlotPanel() {
   const pickedHere = list.filter((b) => checkedSet.has(b.id)).map((b) => b.id);
   const toPlace = checked.filter((id) => !hereIds.has(id));
   const runs = seriesRuns(list);
+  const slotKey = `${slot.shelfId}|${slot.row}|${slot.col}`;
+  const ask = leftover?.slotKey === slotKey ? leftover : null;
+  const canOther = !!ask && double && !ask.triedOther;
+  const canSide = !!ask && !ask.triedSide && hasSlotRight(shelf, slot);
+  /** Place the leftover somewhere else, keep whatever still does not fit for the next question. */
+  const resolve = async (next: Partial<Leftover>, place: (ids: string[]) => Promise<string[]>) => {
+    if (!ask) return;
+    const rest = await place(ask.rest);
+    drop(ask.rest.filter((id) => !rest.includes(id)));
+    setLeftover(rest.length ? { ...ask, ...next, rest } : null);
+  };
   const setPicked = (ids: string[], on: boolean) => {
     const rest = checked.filter((id) => !ids.includes(id));
     setChecked(on ? [...rest, ...ids] : rest);
@@ -106,8 +119,9 @@ export function SlotPanel() {
           onClick={async () => {
             setPlacing(true);
             try {
-              await placeBooks(toPlace, slot, layer);
-              drop(toPlace);
+              const rest = await fillSlot(toPlace, slot, layer);
+              drop(toPlace.filter((id) => !rest.includes(id)));
+              setLeftover(rest.length ? { slotKey, rest, last: layer, triedOther: false, triedSide: false } : null);
             } finally {
               setPlacing(false);
             }
@@ -120,6 +134,31 @@ export function SlotPanel() {
           Fokus ke rak
         </Button>
       </div>
+
+      {ask && (
+        <section aria-label="Sisa buku" role="region" className="leftover">
+          <p>
+            {canOther || canSide
+              ? `Lapis ${ask.last} penuh. ${ask.rest.length} buku belum tertaruh.`
+              : `${ask.rest.length} buku tidak muat di tingkat ini.`}
+          </p>
+          <div className="row">
+            {canOther && (
+              <Button size="sm" variant="outline" onClick={() => void resolve({ triedOther: true, last: other }, (ids) => fillSlot(ids, slot, other))}>
+                Ke lapis {other}
+              </Button>
+            )}
+            {canSide && (
+              <Button size="sm" variant="outline" onClick={() => void resolve({ triedSide: true }, (ids) => flowToRight(ids, slot, layer))}>
+                Ke slot sebelah
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setLeftover(null)}>
+              Biarkan
+            </Button>
+          </div>
+        </section>
+      )}
 
       <h4>{double ? `Isi lapis ${layer}` : 'Isi slot'}</h4>
       {list.length === 0 && <p className="hint">{double ? `Lapis ${layer} masih kosong.` : 'Slot ini masih kosong.'}</p>}
@@ -238,4 +277,13 @@ function seriesRuns(list: Book[]): { key: string; name: string; start: number; b
     else runs.push({ key: `${name}-${i}`, name, start: i, books: [b] });
   });
   return runs;
+}
+
+interface Leftover {
+  slotKey: string;
+  rest: string[];
+  /** The layer that filled up last, named in the question. */
+  last: Layer;
+  triedOther: boolean;
+  triedSide: boolean;
 }

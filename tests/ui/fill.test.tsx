@@ -46,10 +46,10 @@ test('select all volumes of a series', async () => {
   expect(screen.getByRole('button', { name: 'Taruh di lapis depan (4)' })).toBeEnabled();
 });
 
-test('overflowing slot shows a warning', async () => {
-  const { user } = await setup(30);
-  await user.click(within(unplaced()).getByRole('checkbox', { name: 'Pilih semua Naruto' }));
-  await user.click(screen.getByRole('button', { name: 'Taruh di lapis depan (30)' }));
+test('a slot that already holds too much (e.g. from an older backup) shows a warning', async () => {
+  const { id } = await setup(30);
+  // Taruh no longer overfills; older data can still hold more than fits.
+  await useDataStore.getState().placeBooks(useDataStore.getState().books.map((b) => b.id), { shelfId: id, row: 0, col: 0 });
   expect(await within(slot()).findByText(/Meluap/)).toBeInTheDocument();
   expect(within(slot()).getAllByRole('listitem')).toHaveLength(30);
 });
@@ -195,25 +195,26 @@ describe('when the back layer is full', () => {
   const inSlot = (col: number, layer: string) =>
     useDataStore.getState().books.filter((b) => b.placement?.col === col && b.placement.layer === layer).length;
 
+  // Saving 20+ books to the fake IndexedDB can take over a second when the whole suite runs.
   test('only what fits goes in, then the rest can go to the front', async () => {
     const { user, region } = await overfill(25);
-    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' });
+    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' }, { timeout: 5000 });
     expect(ask).toHaveTextContent('Lapis belakang penuh. 3 buku belum tertaruh.');
     expect(inSlot(0, 'belakang')).toBe(22);
     await user.click(within(ask).getByRole('button', { name: 'Ke lapis depan' }));
-    await waitFor(() => expect(inSlot(0, 'depan')).toBe(3));
+    await waitFor(() => expect(inSlot(0, 'depan')).toBe(3), { timeout: 5000 });
     expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument();
   });
 
   test('the rest can go to the slot on the right', async () => {
     const { user, region } = await overfill(25);
-    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' })).getByRole('button', { name: 'Ke slot sebelah' }));
-    await waitFor(() => expect(inSlot(1, 'belakang')).toBe(3));
+    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' }, { timeout: 5000 })).getByRole('button', { name: 'Ke slot sebelah' }));
+    await waitFor(() => expect(inSlot(1, 'belakang')).toBe(3), { timeout: 5000 });
   });
 
   test('"Biarkan" leaves the rest unplaced and still picked', async () => {
     const { user, region } = await overfill(25);
-    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' })).getByRole('button', { name: 'Biarkan' }));
+    await user.click(within(await within(region()).findByRole('region', { name: 'Sisa buku' }, { timeout: 5000 })).getByRole('button', { name: 'Biarkan' }));
     expect(useDataStore.getState().books.filter((b) => b.placement === null)).toHaveLength(3);
     expect(useUiStore.getState().checkedBookIds).toHaveLength(3);
     expect(within(region()).queryByRole('region', { name: 'Sisa buku' })).not.toBeInTheDocument();
@@ -221,10 +222,10 @@ describe('when the back layer is full', () => {
 
   test('in the last column, after the front fills too, it says the books do not fit in this tier', async () => {
     const { user, region } = await overfill(50, 3);
-    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' });
+    const ask = await within(region()).findByRole('region', { name: 'Sisa buku' }, { timeout: 5000 });
     expect(within(ask).queryByRole('button', { name: 'Ke slot sebelah' })).not.toBeInTheDocument();
     await user.click(within(ask).getByRole('button', { name: 'Ke lapis depan' }));
-    await waitFor(() => expect(within(region()).getByRole('region', { name: 'Sisa buku' })).toHaveTextContent('6 buku tidak muat di tingkat ini.'));
+    await waitFor(() => expect(within(region()).getByRole('region', { name: 'Sisa buku' })).toHaveTextContent('6 buku tidak muat di tingkat ini.'), { timeout: 5000 });
     expect(within(within(region()).getByRole('region', { name: 'Sisa buku' })).queryByRole('button', { name: /Ke / })).not.toBeInTheDocument();
   });
 });
