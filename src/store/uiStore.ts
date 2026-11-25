@@ -34,7 +34,8 @@ export const createUiStore = () =>
     mode: 'tata',
     selectedShelfId: null,
     selectedSlot: null,
-    slotLayer: 'depan',
+    // Fill the back row first: a slot opens on its back layer (single-layer shelves show the front).
+    slotLayer: 'belakang',
     checkedBookIds: [],
     highlightBookId: null,
     focusShelfId: null,
@@ -42,7 +43,7 @@ export const createUiStore = () =>
     setPage: (page) => set({ page }),
     setMode: (mode) => set({ mode, selectedSlot: null }),
     selectShelf: (selectedShelfId) => set({ selectedShelfId }),
-    selectSlot: (selectedSlot, slotLayer = 'depan') =>
+    selectSlot: (selectedSlot, slotLayer = 'belakang') =>
       set({ selectedSlot, slotLayer, selectedShelfId: selectedSlot?.shelfId ?? get().selectedShelfId }),
     setSlotLayer: (slotLayer) => set({ slotLayer }),
     toggleChecked: (id) => {

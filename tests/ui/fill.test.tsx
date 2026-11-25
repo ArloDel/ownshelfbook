@@ -168,7 +168,8 @@ describe('selecting books in a slot', () => {
     expect(within(slot()).getByRole('button', { name: 'Taruh di lapis depan (0)' })).toBeDisabled();
     act(() => useUiStore.getState().selectSlot({ shelfId: id, row: 0, col: 1 }));
     const target = await screen.findByRole('region', { name: /Tingkat 1 · Kolom 2/ });
-    await user.click(within(target).getByRole('button', { name: 'Taruh di lapis depan (2)' }));
+    // The other slot opens on its back layer: the back row fills first.
+    await user.click(within(target).getByRole('button', { name: 'Taruh di lapis belakang (2)' }));
     await waitFor(() =>
       expect(useDataStore.getState().books.filter((b) => b.placement?.col === 1).map((b) => b.volume).sort()).toEqual([1, 2]),
     );
