@@ -4,6 +4,7 @@ import {
   countBooksOutside,
   layerOf,
   moveInSlot,
+  moveBooksToLayer,
   moveToLayer,
   normalizeOrders,
   placeBooks,
@@ -199,5 +200,33 @@ describe('two layers', () => {
     const back = returnBooksOutside(r, { ...shelf, depthCm: 20 });
     expect(back.filter((b) => b.placement === null).map((b) => b.volume)).toEqual([3, 4]);
     expect(vols(back, 'depan')).toEqual([1, 2]);
+  });
+});
+
+describe('moveBooksToLayer', () => {
+  const vols = (books: Book[], slot: typeof slotA, layer: 'depan' | 'belakang') => booksInSlot(books, slot, layer).map((b) => b.volume);
+
+  test('moves several books at once, keeping their order, and closes the gaps', () => {
+    const books = komik(5);
+    let r = placeBooks(books, books.map((b) => b.id), slotA);
+    r = moveBooksToLayer(r, [books[3].id, books[1].id], 'belakang');
+    expect(vols(r, slotA, 'belakang')).toEqual([2, 4]);
+    expect(vols(r, slotA, 'depan')).toEqual([1, 3, 5]);
+    expect(booksInSlot(r, slotA, 'depan').map((b) => b.placement!.order)).toEqual([0, 1, 2]);
+  });
+
+  test('books from two slots each stay in their own slot', () => {
+    const books = komik(4);
+    let r = placeBooks(books, [books[0].id, books[1].id], slotA);
+    r = placeBooks(r, [books[2].id, books[3].id], slotB);
+    r = moveBooksToLayer(r, [books[0].id, books[2].id], 'belakang');
+    expect(vols(r, slotA, 'belakang')).toEqual([1]);
+    expect(vols(r, slotB, 'belakang')).toEqual([3]);
+  });
+
+  test('unplaced books and books already on that layer are left alone', () => {
+    const books = komik(3);
+    const r = placeBooks(books, [books[0].id], slotA, 'belakang');
+    expect(moveBooksToLayer(r, [books[0].id, books[1].id], 'belakang')).toBe(r);
   });
 });
