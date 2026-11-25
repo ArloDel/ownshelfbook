@@ -2,6 +2,9 @@ import { createBook } from '../../src/domain/books';
 import {
   booksInSlot,
   countBooksOutside,
+  fillLayer,
+  flowRight,
+  hasSlotRight,
   layerOf,
   moveInSlot,
   moveBooksToLayer,
@@ -228,5 +231,58 @@ describe('moveBooksToLayer', () => {
     const books = komik(3);
     const r = placeBooks(books, [books[0].id], slotA, 'belakang');
     expect(moveBooksToLayer(r, [books[0].id, books[1].id], 'belakang')).toBe(r);
+  });
+});
+
+describe('fillLayer', () => {
+  const ids = (books: Book[]) => books.map((b) => b.id);
+
+  test('places books in order until the layer is full and hands back the rest', () => {
+    const books = komik(25); // 25 × 1.5 cm into a 33 cm slot: 22 fit
+    const r = fillLayer(books, ids(books), shelf, slotA, 'belakang');
+    expect(r.placed).toEqual(ids(books).slice(0, 22));
+    expect(r.rest).toEqual(ids(books).slice(22));
+    expect(booksInSlot(r.books, slotA, 'belakang')).toHaveLength(22);
+    expect(r.books.filter((b) => b.placement === null)).toHaveLength(3);
+  });
+
+  test('counts what the layer already holds', () => {
+    const books = komik(25);
+    const first = placeBooks(books, ids(books).slice(0, 20), slotA, 'belakang');
+    const r = fillLayer(first, ids(books).slice(20), shelf, slotA, 'belakang');
+    expect(r.placed).toHaveLength(2);
+    expect(r.rest).toHaveLength(3);
+  });
+
+  test('never skips ahead: a thick book that does not fit stops the run', () => {
+    const books = komik(22);
+    const thick = { ...createBook({ title: 'Tebal', type: 'buku' }), thicknessCm: 3 };
+    const thin = createBook({ title: 'Tipis', type: 'komik' });
+    const start = placeBooks([...books, thick, thin], ids(books).slice(0, 21), slotA); // 31.5 cm used
+    const r = fillLayer(start, [thick.id, thin.id], shelf, slotA, 'depan');
+    expect(r.placed).toEqual([]);
+    expect(r.rest).toEqual([thick.id, thin.id]);
+  });
+});
+
+describe('flowRight', () => {
+  test('fills the same layer of the slots to the right, then hands back what is left at the end of the tier', () => {
+    const books = komik(100);
+    const all = books.map((b) => b.id);
+    const first = fillLayer(books, all, shelf, slotA, 'belakang');
+    const r = flowRight(first.books, first.rest, shelf, slotA, 'belakang');
+    for (const col of [1, 2, 3]) expect(booksInSlot(r.books, { ...slotA, col }, 'belakang')).toHaveLength(22);
+    expect(r.rest).toHaveLength(100 - 88);
+    expect(booksInSlot(r.books, slotB, 'depan')).toHaveLength(0);
+  });
+
+  test('at the last column there is nowhere to go', () => {
+    const books = komik(2);
+    const last = { ...slotA, col: 3 };
+    const r = flowRight(books, books.map((b) => b.id), shelf, last, 'depan');
+    expect(r.rest).toHaveLength(2);
+    expect(r.books).toBe(books);
+    expect(hasSlotRight(shelf, last)).toBe(false);
+    expect(hasSlotRight(shelf, slotA)).toBe(true);
   });
 });
