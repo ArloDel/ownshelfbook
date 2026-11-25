@@ -1,12 +1,13 @@
 import { Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Color, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Color, InstancedMesh, Matrix4, Object3D, SRGBColorSpace, TextureLoader, Vector3 } from 'three';
+import { seriesKey } from '../../domain/covers';
 import { booksInSlot } from '../../domain/placement';
 import { canDoubleStack, columnCount, riserOf, slotRect } from '../../domain/shelves';
 import type { Book, Layer, Shelf } from '../../domain/types';
-import { bookLabel } from '../common/labels';
 import { bandColor, heightFactor, leanBook, spineBands } from './bookLook';
+import { splitByCover, spineLabelText } from './covers3d';
 import { backBookDepth, backBookZ, backSpace, riserBox } from './layers';
 import { layoutBooksInSlot, type SlotBox } from './layout';
 
@@ -113,29 +114,51 @@ function shelfWorld(s: Shelf, m: Matrix4) {
   return m.copy(dummy.matrix);
 }
 
-export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shelves: Shelf[]; highlightId?: string | null }) {
+const NO_COVERS: Record<string, string> = {};
+const HIGHLIGHT = '#ffd54a';
+
+/** Book frame in world space: shelf -> book centre -> lean. */
+function bookWorld(p: PlacedBook, out: Matrix4) {
+  shelfWorld(p.shelf, shelfMatrix);
+  dummy.position.set(...p.local);
+  dummy.rotation.set(0, 0, p.tilt);
+  dummy.scale.set(1, 1, 1);
+  dummy.updateMatrix();
+  return out.multiplyMatrices(shelfMatrix, dummy.matrix);
+}
+
+export function BooksMesh({
+  books,
+  shelves,
+  highlightId,
+  covers = NO_COVERS,
+}: {
+  books: Book[];
+  shelves: Shelf[];
+  highlightId?: string | null;
+  covers?: Record<string, string>;
+}) {
   const { placed, risers } = useMemo(() => placedLayout(books, shelves), [books, shelves]);
+  const { plain, covered } = useMemo(() => splitByCover(placed, covers), [placed, covers]);
   const ref = useRef<InstancedMesh>(null);
   const bandsRef = useRef<InstancedMesh>(null);
   const capacity = Math.max(1, placed.length);
+  const bandCapacity = Math.max(1, plain.length);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     const bands = bandsRef.current;
     if (!mesh || !bands) return;
+    // Every book body; spine images are laid over the front face separately.
     placed.forEach((p, i) => {
-      // Book frame: shelf → book centre → lean.
-      shelfWorld(p.shelf, shelfMatrix);
-      dummy.position.set(...p.local);
-      dummy.rotation.set(0, 0, p.tilt);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      bookMatrix.multiplyMatrices(shelfMatrix, dummy.matrix);
-
-      const color = p.book.id === highlightId ? '#ffd54a' : p.book.color;
+      bookWorld(p, bookMatrix);
       mesh.setMatrixAt(i, partMatrix.multiplyMatrices(bookMatrix, partMatrix.makeScale(...p.size)));
-      mesh.setColorAt(i, tmp.set(color));
-
+      mesh.setColorAt(i, tmp.set(p.book.id === highlightId ? HIGHLIGHT : p.book.color));
+    });
+    // Spine bands only on books without an image.
+    plain.forEach((p, i) => {
+      bookWorld(p, bookMatrix);
+      const color = p.book.id === highlightId ? HIGHLIGHT : p.book.color;
       spineBands(p.size).forEach((band, k) => {
         dummy.position.set(...band.position);
         dummy.rotation.set(0, 0, 0);
@@ -146,13 +169,13 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
       });
     });
     mesh.count = placed.length;
-    bands.count = placed.length * 2;
+    bands.count = plain.length * 2;
     for (const m of [mesh, bands]) {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
       m.computeBoundingSphere();
     }
-  }, [placed, highlightId]);
+  }, [placed, plain, highlightId]);
 
   return (
     <>
@@ -160,11 +183,14 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.7} />
       </instancedMesh>
-      <instancedMesh key={`bands-${capacity}`} ref={bandsRef} args={[undefined, undefined, capacity * 2]} raycast={() => null}>
+      <instancedMesh key={`bands-${bandCapacity}`} ref={bandsRef} args={[undefined, undefined, bandCapacity * 2]} raycast={() => null}>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.6} />
       </instancedMesh>
-      <SpineLabels placed={placed} shelves={shelves} />
+      {[...covered].map(([key, items]) => (
+        <CoveredSpines key={key} items={items} image={covers[key]} highlightId={highlightId} />
+      ))}
+      <SpineLabels placed={placed} shelves={shelves} covers={covers} />
       {risers.map((r, i) => (
         <group key={`riser-${r.shelf.id}-${i}`} position={[r.shelf.position.x, r.shelf.elevationCm, r.shelf.position.z]} rotation-y={(r.shelf.rotationY * Math.PI) / 180}>
           <mesh position={r.position} castShadow receiveShadow raycast={() => null}>
@@ -177,8 +203,46 @@ export function BooksMesh({ books, shelves, highlightId }: { books: Book[]; shel
   );
 }
 
+/** One series' spine image, laid just in front of each of its books' spines. */
+function CoveredSpines({ items, image, highlightId }: { items: PlacedBook[]; image: string; highlightId?: string | null }) {
+  const ref = useRef<InstancedMesh>(null);
+  const capacity = Math.max(1, items.length);
+  const texture = useMemo(() => {
+    const t = new TextureLoader().load(image);
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  }, [image]);
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    items.forEach((p, i) => {
+      bookWorld(p, bookMatrix);
+      dummy.position.set(0, 0, p.size[2] / 2 + 0.03);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(p.size[0], p.size[1], 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, partMatrix.multiplyMatrices(bookMatrix, dummy.matrix));
+      // A book highlighted from search glows warm; others show the picture as it is.
+      mesh.setColorAt(i, tmp.set(p.book.id === highlightId ? '#ffe9a0' : '#ffffff'));
+    });
+    mesh.count = items.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [items, highlightId]);
+
+  return (
+    <instancedMesh key={capacity} ref={ref} args={[undefined, undefined, capacity]} raycast={() => null}>
+      <planeGeometry args={[1, 1]} />
+      <meshStandardMaterial map={texture} roughness={0.75} />
+    </instancedMesh>
+  );
+}
+
 /** Spine text only for shelves close to the camera (text is expensive). */
-function SpineLabels({ placed, shelves }: { placed: PlacedBook[]; shelves: Shelf[] }) {
+function SpineLabels({ placed, shelves, covers }: { placed: PlacedBook[]; shelves: Shelf[]; covers: Record<string, string> }) {
   const [near, setNear] = useState<Set<string>>(new Set());
   const acc = useRef(0);
   const v = useMemo(() => new Vector3(), []);
@@ -200,28 +264,47 @@ function SpineLabels({ placed, shelves }: { placed: PlacedBook[]; shelves: Shelf
     <>
       {placed
         .filter((p) => near.has(p.shelf.id) && p.size[0] >= 1)
-        .map((p) => (
-          <group
-            key={p.book.id}
-            position={[p.shelf.position.x, p.shelf.elevationCm, p.shelf.position.z]}
-            rotation-y={(p.shelf.rotationY * Math.PI) / 180}
-          >
-            <Text
-              position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.05]}
-              rotation-z={p.tilt - Math.PI / 2}
-              fontSize={Math.min(p.size[0] * 0.55, 1.4)}
-              maxWidth={p.size[1] - 2.6}
-              color={readableOn(p.book.color)}
-              anchorX="center"
-              anchorY="middle"
-              overflowWrap="break-word"
-              whiteSpace="nowrap"
-              clipRect={[-(p.size[1] - 2.6) / 2, -p.size[0], (p.size[1] - 2.6) / 2, p.size[0]]}
-            >
-              {bookLabel(p.book)}
-            </Text>
-          </group>
-        ))}
+        .map((p) => {
+          const hasCover = !!covers[seriesKey(p.book)];
+          const text = spineLabelText(p.book, hasCover);
+          const at: [number, number, number] = [p.shelf.position.x, p.shelf.elevationCm, p.shelf.position.z];
+          const turn = (p.shelf.rotationY * Math.PI) / 180;
+          if (hasCover && p.book.volume !== undefined) {
+            // Volume number, upright near the foot of the spine, on a dark band so it reads over the picture.
+            const size = Math.min(p.size[0] * 0.8, 2.2);
+            return (
+              <group key={p.book.id} position={at} rotation-y={turn}>
+                <group position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.06]} rotation-z={p.tilt}>
+                  <mesh position={[0, -p.size[1] * 0.35, 0]}>
+                    <planeGeometry args={[p.size[0] * 0.92, size * 1.3]} />
+                    <meshBasicMaterial color="#000000" transparent opacity={0.6} />
+                  </mesh>
+                  <Text position={[0, -p.size[1] * 0.35, 0.02]} fontSize={size} color="#ffffff" anchorX="center" anchorY="middle">
+                    {text}
+                  </Text>
+                </group>
+              </group>
+            );
+          }
+          return (
+            <group key={p.book.id} position={at} rotation-y={turn}>
+              <Text
+                position={[p.local[0], p.local[1], p.local[2] + p.size[2] / 2 + 0.05]}
+                rotation-z={p.tilt - Math.PI / 2}
+                fontSize={Math.min(p.size[0] * 0.55, 1.4)}
+                maxWidth={p.size[1] - 2.6}
+                color={readableOn(p.book.color)}
+                anchorX="center"
+                anchorY="middle"
+                overflowWrap="break-word"
+                whiteSpace="nowrap"
+                clipRect={[-(p.size[1] - 2.6) / 2, -p.size[0], (p.size[1] - 2.6) / 2, p.size[0]]}
+              >
+                {text}
+              </Text>
+            </group>
+          );
+        })}
     </>
   );
 }

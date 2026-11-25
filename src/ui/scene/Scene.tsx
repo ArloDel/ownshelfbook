@@ -26,6 +26,7 @@ function SceneContent() {
   const room = useDataStore((s) => s.room);
   const shelves = useDataStore((s) => s.shelves);
   const books = useDataStore((s) => s.books);
+  const covers = useDataStore((s) => s.covers);
   const updateShelf = useDataStore((s) => s.updateShelf);
   const mode = useUiStore((s) => s.mode);
   const selectedShelfId = useUiStore((s) => s.selectedShelfId);
@@ -103,7 +104,7 @@ function SceneContent() {
             {mode === 'isi' && <SlotHits shelf={s} books={books} selected={selectedSlot} onSelect={selectSlot} />}
           </ShelfMesh>
         ))}
-        <BooksMesh books={books} shelves={shown} highlightId={highlightId} />
+        <BooksMesh books={books} shelves={shown} highlightId={highlightId} covers={covers} />
       </group>
       <CameraFocus />
       <OrbitControls makeDefault target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2 - 0.05} minDistance={0.3} maxDistance={15} />
