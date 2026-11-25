@@ -1,19 +1,24 @@
-import { slotRect } from './shelves';
-import type { Book, Shelf, SlotRef } from './types';
+import { canDoubleStack, riserOf, slotRect } from './shelves';
+import type { Book, Layer, Placement, Shelf, SlotRef } from './types';
 
-const slotKey = (p: { shelfId: string; row: number; col: number }) => `${p.shelfId}|${p.row}|${p.col}`;
+export const layerOf = (p: Placement): Layer => p.layer ?? 'depan';
 
-const inSlot = (b: Book, slot: SlotRef) =>
+const slotKey = (p: Placement) => `${p.shelfId}|${p.row}|${p.col}|${layerOf(p)}`;
+
+/** In the slot, and in `layer` when one is given. */
+const inSlot = (b: Book, slot: SlotRef, layer?: Layer) =>
   b.placement !== null &&
   b.placement.shelfId === slot.shelfId &&
   b.placement.row === slot.row &&
-  b.placement.col === slot.col;
+  b.placement.col === slot.col &&
+  (layer === undefined || layerOf(b.placement) === layer);
 
-export function booksInSlot(books: Book[], slot: SlotRef): Book[] {
-  return books.filter((b) => inSlot(b, slot)).sort((a, b) => a.placement!.order - b.placement!.order);
+/** Books in a slot by order; without `layer`, both layers. */
+export function booksInSlot(books: Book[], slot: SlotRef, layer?: Layer): Book[] {
+  return books.filter((b) => inSlot(b, slot, layer)).sort((a, b) => a.placement!.order - b.placement!.order);
 }
 
-/** Per slot, re-number `order` to 0..n-1 keeping the relative order. */
+/** Per slot and layer, re-number `order` to 0..n-1 keeping the relative order. */
 export function normalizeOrders(books: Book[]): Book[] {
   const groups = new Map<string, Book[]>();
   for (const b of books) {
@@ -32,13 +37,14 @@ export function normalizeOrders(books: Book[]): Book[] {
   );
 }
 
-export function placeBooks(books: Book[], ids: string[], slot: SlotRef): Book[] {
+export function placeBooks(books: Book[], ids: string[], slot: SlotRef, layer: Layer = 'depan'): Book[] {
   const moving = new Set(ids);
-  const remaining = books.filter((b) => !moving.has(b.id) && inSlot(b, slot));
+  const remaining = books.filter((b) => !moving.has(b.id) && inSlot(b, slot, layer));
   let next = remaining.length;
   const orderOf = new Map(ids.map((id) => [id, next++]));
+  const target = { shelfId: slot.shelfId, row: slot.row, col: slot.col };
   const placed = books.map((b) =>
-    moving.has(b.id) ? { ...b, placement: { ...slot, order: orderOf.get(b.id)! } } : b,
+    moving.has(b.id) ? { ...b, placement: { ...target, order: orderOf.get(b.id)!, layer } } : b,
   );
   return normalizeOrders(placed);
 }
@@ -52,11 +58,19 @@ export function moveInSlot(books: Book[], id: string, newIndex: number): Book[] 
   const book = books.find((b) => b.id === id);
   if (!book?.placement) return books;
   const slot = book.placement;
-  const ordered = booksInSlot(books, slot).filter((b) => b.id !== id);
+  const ordered = booksInSlot(books, slot, layerOf(slot)).filter((b) => b.id !== id);
   const index = Math.max(0, Math.min(ordered.length, newIndex));
   ordered.splice(index, 0, book);
   const orderOf = new Map(ordered.map((b, i) => [b.id, i]));
   return books.map((b) => (orderOf.has(b.id) ? { ...b, placement: { ...b.placement!, order: orderOf.get(b.id)! } } : b));
+}
+
+/** Send a placed book to the end of the other layer of its slot. */
+export function moveToLayer(books: Book[], id: string, layer: Layer): Book[] {
+  const book = books.find((b) => b.id === id);
+  if (!book?.placement || layerOf(book.placement) === layer) return books;
+  const { shelfId, row, col } = book.placement;
+  return placeBooks(books, [id], { shelfId, row, col }, layer);
 }
 
 export function slotUsage(
@@ -64,25 +78,32 @@ export function slotUsage(
   shelf: Shelf,
   row: number,
   col: number,
+  layer: Layer = 'depan',
 ): { usedCm: number; capacityCm: number; overflow: boolean; tooTall: boolean } {
   const rect = slotRect(shelf, row, col);
-  const inside = booksInSlot(books, { shelfId: shelf.id, row, col });
+  const inside = booksInSlot(books, { shelfId: shelf.id, row, col }, layer);
+  // The back layer stands on the riser, so it has less height to use.
+  const height = layer === 'belakang' ? rect.height - riserOf(shelf) : rect.height;
   const usedCm = Math.round(inside.reduce((s, b) => s + b.thicknessCm, 0) * 1000) / 1000;
   return {
     usedCm,
     capacityCm: rect.width,
     overflow: usedCm > rect.width,
-    tooTall: inside.some((b) => b.heightCm > rect.height),
+    tooTall: inside.some((b) => b.heightCm > height),
   };
 }
 
-/** The parts of a shelf that decide which slots exist. A deleted shelf is a layout with no rows. */
-export type ShelfLayout = Pick<Shelf, 'id' | 'rowHeightsCm' | 'colWidthsCm'>;
+/**
+ * The parts of a shelf that decide where books may stand. A deleted shelf is a layout with no rows.
+ * With `depthCm`, a shelf too shallow for two layers has no back layer.
+ */
+export type ShelfLayout = Pick<Shelf, 'id' | 'rowHeightsCm' | 'colWidthsCm'> & { depthCm?: number };
 
 const isOutside = (b: Book, layout: ShelfLayout) => {
   const p = b.placement;
   if (p === null || p.shelfId !== layout.id) return false;
-  return p.row >= layout.rowHeightsCm.length || p.col >= (layout.colWidthsCm[p.row]?.length ?? 0);
+  if (p.row >= layout.rowHeightsCm.length || p.col >= (layout.colWidthsCm[p.row]?.length ?? 0)) return true;
+  return layout.depthCm !== undefined && layerOf(p) === 'belakang' && !canDoubleStack({ depthCm: layout.depthCm });
 };
 
 export function countBooksOutside(books: Book[], layout: ShelfLayout): number {
