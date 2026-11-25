@@ -6,7 +6,7 @@ import { DEFAULT_ROOM } from '../../src/persistence/db';
 export async function resetAll() {
   await db.delete();
   await db.open();
-  useDataStore.setState({ loaded: true, room: DEFAULT_ROOM, shelves: [], books: [] });
+  useDataStore.setState({ loaded: true, room: DEFAULT_ROOM, shelves: [], books: [], covers: {} });
   useUiStore.setState({
     page: 'room',
     mode: 'tata',

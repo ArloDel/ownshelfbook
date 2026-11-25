@@ -24,7 +24,7 @@ import {
   MAX_ROWS_COLS,
   minInnerWidth,
 } from '../domain/shelves';
-import type { AppData, Book, Layer, Room, Shelf, ShelfModel, SlotRef } from '../domain/types';
+import type { AppData, Book, Cover, Layer, Room, Shelf, ShelfModel, SlotRef } from '../domain/types';
 import { DEFAULT_ROOM } from '../persistence/db';
 import * as repo from '../persistence/repo';
 
@@ -35,6 +35,8 @@ export interface DataState {
   room: Room;
   shelves: Shelf[];
   books: Book[];
+  /** Series spine images by series key (`series ?? title`), as data URLs. */
+  covers: Record<string, string>;
   /** Last persistence/load error, shown to the user; null when all is well. */
   error: string | null;
   clearError(): void;
@@ -63,6 +65,8 @@ export interface DataState {
   setRoom(room: Room): Promise<void>;
   importData(text: string): Promise<void>;
   exportData(): string;
+  setCover(key: string, image: string): Promise<void>;
+  removeCover(key: string): Promise<void>;
 }
 
 /** Books whose object identity changed between two arrays (domain functions keep unchanged books by reference). */
@@ -143,13 +147,15 @@ function normaliseImport(d: AppData): AppData {
       p.col < s.colWidthsCm[p.row].length;
     return valid ? b : { ...b, placement: null };
   });
-  return { room, shelves, books: normalizeOrders(books) };
+  return { room, shelves, books: normalizeOrders(books), covers: d.covers };
 }
 
 function nextShelfName(shelves: Shelf[]): string {
   const nums = shelves.map((s) => /^Rak (\d+)$/.exec(s.name)?.[1]).filter(Boolean).map(Number);
   return `Rak ${Math.max(shelves.length, ...nums, 0) + 1}`;
 }
+
+const toCoverMap = (list: Cover[]): Record<string, string> => Object.fromEntries(list.map((c) => [c.key, c.image]));
 
 const SAVE_ERROR = 'Perubahan gagal disimpan ke penyimpanan browser dan dibatalkan. Coba lagi, atau ekspor cadangan.';
 
@@ -160,15 +166,18 @@ export const createDataStore = () =>
      * If the write fails, restore the previous state and surface an error — never keep
      * a change on screen that is not on disk.
      */
-    async function commit(next: Partial<Pick<DataState, 'books' | 'shelves' | 'room'>>, write: () => Promise<void>): Promise<boolean> {
-      const { books, shelves, room } = get();
+    async function commit(
+      next: Partial<Pick<DataState, 'books' | 'shelves' | 'room' | 'covers'>>,
+      write: () => Promise<void>,
+    ): Promise<boolean> {
+      const { books, shelves, room, covers } = get();
       set(next);
       try {
         await repo.transact(write);
         return true;
       } catch (err) {
         console.error(err);
-        set({ books, shelves, room, error: SAVE_ERROR });
+        set({ books, shelves, room, covers, error: SAVE_ERROR });
         return false;
       }
     }
@@ -191,14 +200,15 @@ export const createDataStore = () =>
       room: DEFAULT_ROOM,
       shelves: [],
       books: [],
+      covers: {},
       error: null,
 
       clearError: () => set({ error: null }),
 
       async hydrate() {
         try {
-          const data = await repo.loadAll();
-          set({ ...data, loaded: true, error: null });
+          const { covers, ...data } = await repo.loadAll();
+          set({ ...data, covers: toCoverMap(covers ?? []), loaded: true, error: null });
         } catch (err) {
           console.error(err);
           set({ error: 'Gagal memuat data dari penyimpanan browser. Muat ulang halaman untuk mencoba lagi.' });
@@ -329,12 +339,23 @@ export const createDataStore = () =>
       async importData(text) {
         const data = normaliseImport(parseBackup(text));
         await repo.replaceAll(data);
-        set({ ...data, error: null });
+        const { covers, ...rest } = data;
+        // A backup without images leaves the saved images alone.
+        set({ ...rest, ...(covers ? { covers: toCoverMap(covers) } : {}), error: null });
       },
 
       exportData() {
-        const { room, shelves, books } = get();
-        return toBackup({ room, shelves, books });
+        const { room, shelves, books, covers } = get();
+        return toBackup({ room, shelves, books, covers: Object.entries(covers).map(([key, image]) => ({ key, image })) });
+      },
+
+      async setCover(key, image) {
+        await commit({ covers: { ...get().covers, [key]: image } }, () => repo.saveCover({ key, image }));
+      },
+
+      async removeCover(key) {
+        const { [key]: _gone, ...rest } = get().covers;
+        await commit({ covers: rest }, () => repo.deleteCover(key));
       },
     };
   });
