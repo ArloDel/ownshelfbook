@@ -102,3 +102,32 @@ describe('layers in backups', () => {
     expect(d.shelves[0].backRiserCm).toBeUndefined();
   });
 });
+
+describe('spine images in backups', () => {
+  const withCovers = { ...data, covers: [{ key: 'Naruto', image: 'data:image/webp;base64,AAA' }] };
+
+  test('images make the round trip', () => {
+    expect(parseBackup(toBackup(withCovers))).toEqual(withCovers);
+  });
+
+  test('a version 2 file has no images', () => {
+    const obj = JSON.parse(toBackup(data));
+    obj.version = 2;
+    expect(parseBackup(JSON.stringify(obj)).covers).toBeUndefined();
+  });
+
+  test('an image that is not an inline picture, or is too big, is rejected', () => {
+    const notInline = JSON.parse(toBackup(withCovers));
+    notInline.covers[0].image = 'http://x';
+    expect(() => parseBackup(JSON.stringify(notInline))).toThrow('gambar ke-1');
+    const huge = JSON.parse(toBackup(withCovers));
+    huge.covers[0].image = 'data:image/webp;base64,' + 'A'.repeat(300_001 - 'data:image/webp;base64,'.length);
+    expect(() => parseBackup(JSON.stringify(huge))).toThrow('gambar ke-1');
+  });
+
+  test('version 4 is still refused', () => {
+    const obj = JSON.parse(toBackup(data));
+    obj.version = 4;
+    expect(() => parseBackup(JSON.stringify(obj))).toThrow();
+  });
+});

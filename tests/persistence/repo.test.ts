@@ -9,7 +9,7 @@ beforeEach(async () => {
 });
 
 test('fresh db loads defaults', async () => {
-  expect(await loadAll()).toEqual({ room: DEFAULT_ROOM, shelves: [], books: [] });
+  expect(await loadAll()).toEqual({ room: DEFAULT_ROOM, shelves: [], books: [], covers: [] });
 });
 
 test('saves and loads books, shelves and room', async () => {
