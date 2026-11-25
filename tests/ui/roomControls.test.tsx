@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDataStore } from '../../src/store/dataStore';
 import { useUiStore } from '../../src/store/uiStore';
@@ -15,7 +15,8 @@ test('add shelf menu adds the chosen model and selects it', async () => {
   await user.click(screen.getByRole('menuitem', { name: 'Rak kubus' }));
   const [shelf] = useDataStore.getState().shelves;
   expect(shelf.model).toBe('kubus');
-  expect(useUiStore.getState().selectedShelfId).toBe(shelf.id);
+  // The new shelf is selected once it is saved, which can lag the shelf appearing.
+  await waitFor(() => expect(useUiStore.getState().selectedShelfId).toBe(shelf.id));
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 

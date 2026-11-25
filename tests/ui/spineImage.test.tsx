@@ -36,7 +36,8 @@ test('pick a picture, preview it, and save it for the whole series', async () =>
   expect(await within(dialog).findByAltText('Pratinjau punggung')).toHaveAttribute('src', 'data:image/webp;base64,SPINE');
   await user.click(within(dialog).getByRole('button', { name: 'Simpan' }));
   await waitFor(() => expect(useDataStore.getState().covers.Naruto).toBe('data:image/webp;base64,SPINE'));
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  // The dialog closes after the save finishes, which can lag the image appearing in the store.
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(within(screen.getByRole('button', { name: 'Gambar punggung Naruto' })).getByRole('img')).toBeInTheDocument();
 });
 

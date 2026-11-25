@@ -142,7 +142,8 @@ describe('selecting books in a slot', () => {
     expect(bar).toHaveTextContent('4 dipilih');
     await user.click(within(bar).getByRole('button', { name: 'Pindah ke belakang' }));
     await waitFor(() => expect([1, 2, 3, 4].map(placedLayer)).toEqual(['belakang', 'belakang', 'belakang', 'belakang']));
-    expect(useUiStore.getState().checkedBookIds).toEqual([]);
+    // Picks clear after the save finishes, which can lag the books moving in the store.
+    await waitFor(() => expect(useUiStore.getState().checkedBookIds).toEqual([]));
   });
 
   test('take a few checked books out of the slot at once', async () => {
