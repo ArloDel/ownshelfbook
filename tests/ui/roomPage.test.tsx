@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDataStore } from '../../src/store/dataStore';
 import { useUiStore } from '../../src/store/uiStore';
@@ -46,4 +46,28 @@ test('mode switch and room actions sit together in one floating toolbar', () => 
   expect(within(bar).getByRole('radiogroup', { name: 'Mode' })).toBeInTheDocument();
   expect(within(bar).getByRole('button', { name: 'Tambah rak' })).toBeInTheDocument();
   expect(within(bar).getByRole('button', { name: 'Ukuran ruangan' })).toBeInTheDocument();
+});
+
+describe('Jelajahi', () => {
+  test('exploring clears the screen and Keluar brings it back', async () => {
+    const user = userEvent.setup();
+    render(<RoomPage />);
+    await user.click(screen.getByRole('button', { name: 'Jelajahi' }));
+    expect(screen.queryByRole('region', { name: 'Belum ditata' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('toolbar', { name: 'Alat ruang' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Keluar' }));
+    expect(useUiStore.getState().exploring).toBe(false);
+    expect(screen.getByRole('toolbar', { name: 'Alat ruang' })).toBeInTheDocument();
+  });
+
+  test('Esc first lets go of a pinned card, then leaves', async () => {
+    const user = userEvent.setup();
+    render(<RoomPage />);
+    await user.click(screen.getByRole('button', { name: 'Jelajahi' }));
+    act(() => useUiStore.getState().setExploreCard({ bookId: 'x', x: 0, y: 0, pinned: true }));
+    await user.keyboard('{Escape}');
+    expect(useUiStore.getState()).toMatchObject({ exploring: true, exploreCard: null });
+    await user.keyboard('{Escape}');
+    expect(useUiStore.getState().exploring).toBe(false);
+  });
 });

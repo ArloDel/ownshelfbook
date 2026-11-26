@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../src/ui/App';
 import { useDataStore } from '../../src/store/dataStore';
+import { useUiStore } from '../../src/store/uiStore';
 import { resetAll } from './helpers';
 
 vi.mock('../../src/ui/room/RoomPage', () => ({ RoomPage: () => <div>ruang-3d</div> }));
@@ -43,4 +44,11 @@ test('load failure shows the error instead of loading forever', async () => {
   } finally {
     useDataStore.setState({ hydrate });
   }
+});
+
+test('the top bar steps aside while exploring', async () => {
+  render(<App />);
+  expect(await screen.findByRole('tablist', { name: 'Halaman' })).toBeInTheDocument();
+  act(() => useUiStore.getState().startExplore());
+  expect(screen.queryByRole('tablist', { name: 'Halaman' })).not.toBeInTheDocument();
 });
