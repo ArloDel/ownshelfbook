@@ -90,7 +90,7 @@ test('keys typed into a text field do not walk; keys on a button do', () => {
   expect(isTypingTarget(document.createElement('input'))).toBe(true);
   expect(isTypingTarget(document.createElement('textarea'))).toBe(true);
   const editable = document.createElement('div');
-  editable.contentEditable = 'true';
+  editable.setAttribute('contenteditable', 'true');
   document.body.append(editable);
   expect(isTypingTarget(editable)).toBe(true);
   expect(isTypingTarget(document.createElement('button'))).toBe(false);
