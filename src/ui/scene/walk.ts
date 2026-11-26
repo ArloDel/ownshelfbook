@@ -105,5 +105,6 @@ export function stepToward(pos: Floor, target: Floor, maxStepCm: number): { pos:
 /** Keys typed into a text field must not walk. */
 export function isTypingTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
-  return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+  const editable = el.isContentEditable || ['', 'true', 'plaintext-only'].includes(el.getAttribute('contenteditable') ?? 'no');
+  return editable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
 }
