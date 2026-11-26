@@ -18,6 +18,7 @@ export function App() {
   const hydrate = useDataStore((s) => s.hydrate);
   const page = useUiStore((s) => s.page);
   const setPage = useUiStore((s) => s.setPage);
+  const exploring = useUiStore((s) => s.exploring);
   const error = useDataStore((s) => s.error);
   const clearError = useDataStore((s) => s.clearError);
 
@@ -38,22 +39,24 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <h1>OwnShelfBook</h1>
-        <Tabs value={page} onValueChange={(v) => setPage(v as Page)} className="self-stretch">
-          <TabsList variant="line" aria-label="Halaman" className="h-full! gap-4 p-0">
-            {TABS.map((t) => (
-              <TabsTrigger key={t.page} value={t.page} className="flex-none px-1 after:bottom-0! data-active:after:bg-primary">
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <div className="topbar-search">
-          <SearchBox />
-        </div>
-        <BackupButtons />
-      </header>
+      {!exploring && (
+        <header className="topbar">
+          <h1>OwnShelfBook</h1>
+          <Tabs value={page} onValueChange={(v) => setPage(v as Page)} className="self-stretch">
+            <TabsList variant="line" aria-label="Halaman" className="h-full! gap-4 p-0">
+              {TABS.map((t) => (
+                <TabsTrigger key={t.page} value={t.page} className="flex-none px-1 after:bottom-0! data-active:after:bg-primary">
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <div className="topbar-search">
+            <SearchBox />
+          </div>
+          <BackupButtons />
+        </header>
+      )}
       <main className={`page page-${page}`}>{page === 'room' ? <RoomPage /> : <CollectionPage />}</main>
       {error && (
         <p role="alert" className="toast error" title="Klik untuk menutup" onClick={clearError}>

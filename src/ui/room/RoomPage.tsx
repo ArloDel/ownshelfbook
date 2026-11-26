@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Footprints, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -6,6 +7,7 @@ import { useDataStore } from '../../store/dataStore';
 import { useUiStore, type Mode } from '../../store/uiStore';
 import { Scene } from '../scene/Scene';
 import { AddShelfMenu } from './AddShelfMenu';
+import { ExploreCard } from './ExploreCard';
 import { RoomSettings } from './RoomSettings';
 import { ShelfPanel } from './ShelfPanel';
 import { SlotPanel } from './SlotPanel';
@@ -33,6 +35,21 @@ export function RoomPage() {
   const slotShelf = useDataStore((s) => s.shelves.find((x) => x.id === slot?.shelfId));
   const unplacedCount = useDataStore((s) => s.books.filter((b) => b.placement === null).length);
   const [listOpen, setListOpen] = useState(true);
+  const exploring = useUiStore((s) => s.exploring);
+  const { startExplore, stopExplore } = useUiStore.getState();
+
+  // Esc while exploring: first let go of a pinned book card, then leave.
+  useEffect(() => {
+    if (!exploring) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const ui = useUiStore.getState();
+      if (ui.exploreCard?.pinned) ui.setExploreCard(null);
+      else ui.stopExplore();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [exploring]);
 
   const slotSelected =
     !!slot && !!slotShelf && slot.row < slotShelf.rowHeightsCm.length && slot.col < slotShelf.colWidthsCm[slot.row].length;
@@ -40,6 +57,22 @@ export function RoomPage() {
   let caption = HINTS[mode];
   if (mode === 'isi' && !slotSelected) {
     caption = checkedCount > 0 ? `${PICK_SLOT} ${checkedCount} buku dipilih dan siap ditaruh.` : PICK_SLOT;
+  }
+
+  if (exploring) {
+    return (
+      <div className="room exploring">
+        <div className="canvas-wrap">
+          <Scene />
+        </div>
+        <Button variant="outline" className="explore-exit" onClick={stopExplore}>
+          <X data-icon="inline-start" aria-hidden />
+          Keluar
+        </Button>
+        <p className="explore-hint">WASD/panah untuk berjalan · Shift lari · seret untuk menoleh · klik lantai untuk berjalan ke sana · Esc keluar</p>
+        <ExploreCard />
+      </div>
+    );
   }
 
   return (
@@ -95,6 +128,10 @@ export function RoomPage() {
             ))}
           </ToggleGroup>
           <Separator orientation="vertical" className="mx-1 h-6!" />
+          <Button variant="ghost" onClick={startExplore}>
+            <Footprints data-icon="inline-start" aria-hidden />
+            Jelajahi
+          </Button>
           <AddShelfMenu />
           <RoomSettings />
         </div>
