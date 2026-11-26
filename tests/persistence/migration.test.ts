@@ -23,3 +23,21 @@ test('v1 shelves in IndexedDB are converted to per-row columns, books keep their
   expect(data.shelves[0].innerWidthCm).toBe(68);
   expect(data.books[0].placement).toEqual(book.placement);
 });
+
+test('a v2 database opens as v3 with its shelves and books intact', async () => {
+  await db.delete();
+  db.close();
+  const shelf = createShelf('kubus', 'Lama');
+  const book = { ...createBook({ title: 'B', type: 'komik' }), placement: { shelfId: shelf.id, row: 0, col: 0, order: 0, layer: 'belakang' as const } };
+  const old = new Dexie('ownshelfbook');
+  old.version(2).stores({ books: 'id, series, placement.shelfId', shelves: 'id', meta: 'key' });
+  await old.table('shelves').put(shelf);
+  await old.table('books').put(book);
+  old.close();
+
+  await db.open();
+  const data = await loadAll();
+  expect(data.shelves).toEqual([shelf]);
+  expect(data.books).toEqual([book]);
+  expect(data.covers).toEqual([]);
+});
