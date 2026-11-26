@@ -40,6 +40,7 @@ function SceneContent() {
   const walkTarget = useRef<{ x: number; z: number } | null>(null);
   const walkTo = (p: { x: number; z: number }) => {
     walkTarget.current = p;
+    useUiStore.getState().setExploreCard(null);
   };
 
   const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
@@ -86,7 +87,12 @@ function SceneContent() {
   }, [controls, updateShelf]);
 
   const onShelfDown = (shelf: Shelf) => (e: ThreeEvent<PointerEvent>) => {
-    if (exploring || mode !== 'tata' || e.button !== 0) return;
+    if (exploring) {
+      // Clicking a shelf body while exploring only lets go of a pinned book card.
+      if (useUiStore.getState().exploreCard?.pinned) useUiStore.getState().setExploreCard(null);
+      return;
+    }
+    if (mode !== 'tata' || e.button !== 0) return;
     e.stopPropagation();
     selectShelf(shelf.id);
     const p = floorPointCm();
@@ -111,7 +117,7 @@ function SceneContent() {
             {mode === 'isi' && !exploring && <SlotHits shelf={s} books={books} selected={selectedSlot} onSelect={selectSlot} />}
           </ShelfMesh>
         ))}
-        <BooksMesh books={books} shelves={shown} highlightId={highlightId} covers={covers} />
+        <BooksMesh books={books} shelves={shown} highlightId={highlightId} covers={covers} pickable={exploring} />
       </group>
       {exploring ? <ExploreControls walkTarget={walkTarget} /> : <CameraFocus />}
       <OrbitControls enabled={!exploring} makeDefault target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2 - 0.05} minDistance={0.3} maxDistance={15} />

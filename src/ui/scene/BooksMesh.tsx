@@ -1,5 +1,7 @@
 import { Text } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useUiStore } from '../../store/uiStore';
+import { isClick } from './clicks';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, InstancedMesh, Matrix4, Object3D, SRGBColorSpace, TextureLoader, Vector3 } from 'three';
 import { seriesKey } from '../../domain/covers';
@@ -132,12 +134,16 @@ export function BooksMesh({
   shelves,
   highlightId,
   covers = NO_COVERS,
+  pickable = false,
 }: {
   books: Book[];
   shelves: Shelf[];
   highlightId?: string | null;
   covers?: Record<string, string>;
+  /** While exploring: books can be pointed at and clicked to show their card. */
+  pickable?: boolean;
 }) {
+  const hoveredId = useUiStore((s) => (pickable ? (s.exploreCard?.bookId ?? null) : null));
   const { placed, risers } = useMemo(() => placedLayout(books, shelves), [books, shelves]);
   const { plain, covered } = useMemo(() => splitByCover(placed, covers, highlightId), [placed, covers, highlightId]);
   const ref = useRef<InstancedMesh>(null);
@@ -154,6 +160,8 @@ export function BooksMesh({
       bookWorld(p, bookMatrix);
       mesh.setMatrixAt(i, partMatrix.multiplyMatrices(bookMatrix, partMatrix.makeScale(...p.size)));
       mesh.setColorAt(i, tmp.set(p.book.id === highlightId ? HIGHLIGHT : p.book.color));
+      // The book being pointed at while exploring glows a little brighter.
+      if (p.book.id === hoveredId) mesh.setColorAt(i, tmp.offsetHSL(0, 0, 0.15));
     });
     // Spine bands only on books without an image.
     plain.forEach((p, i) => {
@@ -175,11 +183,38 @@ export function BooksMesh({
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
       m.computeBoundingSphere();
     }
-  }, [placed, plain, highlightId]);
+  }, [placed, plain, highlightId, hoveredId]);
+
+  const bookAt = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId === undefined ? undefined : placed[e.instanceId]?.book);
+  const onMove = (e: ThreeEvent<PointerEvent>) => {
+    const book = bookAt(e);
+    if (!book) return;
+    e.stopPropagation();
+    const ui = useUiStore.getState();
+    if (ui.exploreCard?.pinned) return;
+    ui.setExploreCard({ bookId: book.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY, pinned: false });
+  };
+  const onOut = () => {
+    const ui = useUiStore.getState();
+    if (ui.exploreCard && !ui.exploreCard.pinned) ui.setExploreCard(null);
+  };
+  const onPick = (e: ThreeEvent<MouseEvent>) => {
+    const book = bookAt(e);
+    if (!book) return;
+    e.stopPropagation();
+    if (!isClick(e)) return;
+    useUiStore.getState().setExploreCard({ bookId: book.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY, pinned: true });
+  };
 
   return (
     <>
-      <instancedMesh key={capacity} ref={ref} args={[undefined, undefined, capacity]} castShadow raycast={() => null}>
+      <instancedMesh
+        key={`${capacity}-${pickable}`}
+        ref={ref}
+        args={[undefined, undefined, capacity]}
+        castShadow
+        {...(pickable ? { onPointerMove: onMove, onPointerOut: onOut, onClick: onPick } : { raycast: () => null })}
+      >
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial roughness={0.7} />
       </instancedMesh>

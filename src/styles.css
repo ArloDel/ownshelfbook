@@ -533,6 +533,29 @@
     /* page background behind the sticky bar, so rows never show through its gaps */
     box-shadow: 0 -8px 0 var(--bg);
   }
+  /* Exploring */
+  .explore-card {
+    position: fixed;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 16rem;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-float);
+    background: var(--surface);
+    box-shadow: var(--shadow-float);
+    font-size: var(--text-sm);
+    pointer-events: none;
+  }
+  .explore-card small {
+    color: var(--muted-foreground);
+    font-size: var(--text-xs);
+  }
+  .explore-card.pinned {
+    outline: 2px solid var(--primary);
+  }
+
   /* Spine image dialog */
   .spine-drop {
     display: flex;
