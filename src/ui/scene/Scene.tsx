@@ -8,6 +8,7 @@ import { useDataStore } from '../../store/dataStore';
 import { useUiStore } from '../../store/uiStore';
 import { BooksMesh } from './BooksMesh';
 import { CameraFocus } from './CameraFocus';
+import { ExploreControls } from './ExploreControls';
 import { Lights } from './Lights';
 import { RoomMesh } from './RoomMesh';
 import { ShelfMesh } from './ShelfMesh';
@@ -85,7 +86,7 @@ function SceneContent() {
   }, [controls, updateShelf]);
 
   const onShelfDown = (shelf: Shelf) => (e: ThreeEvent<PointerEvent>) => {
-    if (mode !== 'tata' || e.button !== 0) return;
+    if (exploring || mode !== 'tata' || e.button !== 0) return;
     e.stopPropagation();
     selectShelf(shelf.id);
     const p = floorPointCm();
@@ -104,16 +105,16 @@ function SceneContent() {
           <ShelfMesh
             key={s.id}
             shelf={s}
-            tint={mode !== 'tata' ? null : overlaps.has(s.id) ? TINT_OVERLAP : s.id === selectedShelfId ? TINT_SELECTED : null}
+            tint={mode !== 'tata' || exploring ? null : overlaps.has(s.id) ? TINT_OVERLAP : s.id === selectedShelfId ? TINT_SELECTED : null}
             onPointerDown={onShelfDown(s)}
           >
-            {mode === 'isi' && <SlotHits shelf={s} books={books} selected={selectedSlot} onSelect={selectSlot} />}
+            {mode === 'isi' && !exploring && <SlotHits shelf={s} books={books} selected={selectedSlot} onSelect={selectSlot} />}
           </ShelfMesh>
         ))}
         <BooksMesh books={books} shelves={shown} highlightId={highlightId} covers={covers} />
       </group>
-      <CameraFocus />
-      <OrbitControls makeDefault target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2 - 0.05} minDistance={0.3} maxDistance={15} />
+      {exploring ? <ExploreControls walkTarget={walkTarget} /> : <CameraFocus />}
+      <OrbitControls enabled={!exploring} makeDefault target={[0, 0.8, 0]} maxPolarAngle={Math.PI / 2 - 0.05} minDistance={0.3} maxDistance={15} />
     </>
   );
 }
