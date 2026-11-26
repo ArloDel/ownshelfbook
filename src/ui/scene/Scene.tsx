@@ -34,6 +34,12 @@ function SceneContent() {
   const highlightId = useUiStore((s) => s.highlightBookId);
   const selectedSlot = useUiStore((s) => s.selectedSlot);
   const selectSlot = useUiStore((s) => s.selectSlot);
+  const exploring = useUiStore((s) => s.exploring);
+  // While exploring, a floor click is a spot to walk to; ExploreControls reads it each frame.
+  const walkTarget = useRef<{ x: number; z: number } | null>(null);
+  const walkTo = (p: { x: number; z: number }) => {
+    walkTarget.current = p;
+  };
 
   const controls = useThree((s) => s.controls) as unknown as { enabled: boolean } | null;
   const { raycaster, pointer, camera } = useThree();
@@ -93,7 +99,7 @@ function SceneContent() {
     <>
       <Lights />
       <group scale={0.01}>
-        <RoomMesh room={room} showGrid={mode === 'tata'} onFloorClick={() => mode === 'tata' && selectShelf(null)} />
+        <RoomMesh room={room} showGrid={mode === 'tata' && !exploring} closed={exploring} onFloorClick={(p) => (exploring ? walkTo(p) : mode === 'tata' && selectShelf(null))} />
         {shown.map((s) => (
           <ShelfMesh
             key={s.id}
