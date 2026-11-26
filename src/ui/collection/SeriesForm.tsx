@@ -4,7 +4,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { useState, type FormEvent } from 'react';
 import type { BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
-import { ThicknessField, useThickness } from './ThicknessField';
+import { SizeField, ThicknessField, useHeight, useThickness } from './ThicknessField';
 
 export function SeriesForm({ onDone }: { onDone(): void }) {
   const addSeries = useDataStore((s) => s.addSeries);
@@ -14,6 +14,7 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
   const [to, setTo] = useState('1');
   const [author, setAuthor] = useState('');
   const thickness = useThickness(type);
+  const height = useHeight(type);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -21,7 +22,7 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await addSeries({ series, type, from: Number(from), to: Number(to), author, thicknessCm: thickness.cm() });
+      await addSeries({ series, type, from: Number(from), to: Number(to), author, thicknessCm: thickness.cm(), heightCm: height.cm() });
       onDone();
     } catch (err) {
       setError((err as Error).message);
@@ -53,7 +54,10 @@ export function SeriesForm({ onDone }: { onDone(): void }) {
           <span>Sampai volume</span>
           <Input type="number" min={1} value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
+      </div>
+      <div className="row">
         <ThicknessField value={thickness.text} onChange={thickness.change} />
+        <SizeField label="Tinggi (cm)" value={height.text} onChange={height.change} />
       </div>
       <label className="field">
         <span>Penulis (opsional)</span>

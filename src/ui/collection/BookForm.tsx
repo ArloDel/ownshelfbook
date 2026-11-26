@@ -1,3 +1,4 @@
+import { checkBookSize } from '../../domain/books';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -5,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useState, type FormEvent } from 'react';
 import type { Book, BookType } from '../../domain/types';
 import { useDataStore } from '../../store/dataStore';
-import { ThicknessField, useThickness } from './ThicknessField';
+import { SizeField, ThicknessField, useHeight, useThickness } from './ThicknessField';
 
 export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
   const addBook = useDataStore((s) => s.addBook);
@@ -19,7 +20,7 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
   const [notes, setNotes] = useState(book?.notes ?? '');
   const [color, setColor] = useState(book?.color ?? '#8a6d4b');
   const thickness = useThickness(type, book?.thicknessCm);
-  const [height, setHeight] = useState(book?.heightCm.toString() ?? '');
+  const height = useHeight(type, book?.heightCm);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const name = editing ? 'Edit buku' : 'Tambah buku';
@@ -34,12 +35,13 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
     setSaving(true);
     try {
       if (!editing) {
-        await addBook({ title, series, volume: vol, type, author, notes, thicknessCm: thickness.cm() });
+        await addBook({ title, series, volume: vol, type, author, notes, thicknessCm: thickness.cm(), heightCm: height.cm() });
       } else {
         if (!title.trim()) throw new Error('Judul wajib diisi');
-        const t = thickness.cm();
-        const h = Number(height);
-        if (!(t > 0) || !(h > 0)) throw new Error('Tebal dan tinggi harus lebih dari 0');
+        // Same ranges and rounding as a new book.
+        const t = Math.round(thickness.cm() * 10) / 10;
+        const h = Math.round(height.cm() * 10) / 10;
+        checkBookSize({ thicknessCm: t, heightCm: h });
         await updateBook(book.id, {
           title: title.trim(),
           series: series.trim() || undefined,
@@ -94,16 +96,11 @@ export function BookForm({ book, onDone }: { book?: Book; onDone(): void }) {
       </label>
       <div className="row">
         <ThicknessField value={thickness.text} onChange={thickness.change} />
+        <SizeField label="Tinggi (cm)" value={height.text} onChange={height.change} />
         {editing && (
           <label className="field">
             <span>Warna punggung</span>
             <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-          </label>
-        )}
-        {editing && (
-          <label className="field">
-            <span>Tinggi (cm)</span>
-            <Input type="number" step={0.5} min={1} value={height} onChange={(e) => setHeight(e.target.value)} />
           </label>
         )}
       </div>
