@@ -4,6 +4,14 @@ import type { Layer, SlotRef } from '../domain/types';
 export type Page = 'room' | 'collection';
 export type Mode = 'tata' | 'isi';
 
+/** The card for the book being pointed at while exploring; `pinned` keeps it after the pointer leaves. */
+export interface ExploreCard {
+  bookId: string;
+  x: number;
+  y: number;
+  pinned: boolean;
+}
+
 export interface UiState {
   page: Page;
   mode: Mode;
@@ -15,6 +23,9 @@ export interface UiState {
   highlightBookId: string | null;
   focusShelfId: string | null;
   unplacedFilter: string;
+  /** Walking around the room (Jelajahi): no panels, no editing. */
+  exploring: boolean;
+  exploreCard: ExploreCard | null;
   setPage(page: Page): void;
   setMode(mode: Mode): void;
   selectShelf(id: string | null): void;
@@ -26,6 +37,9 @@ export interface UiState {
   focusBook(id: string | null, shelfId?: string | null): void;
   focusShelf(id: string | null): void;
   setUnplacedFilter(text: string): void;
+  startExplore(): void;
+  stopExplore(): void;
+  setExploreCard(card: ExploreCard | null): void;
 }
 
 export const createUiStore = () =>
@@ -40,7 +54,10 @@ export const createUiStore = () =>
     highlightBookId: null,
     focusShelfId: null,
     unplacedFilter: '',
-    setPage: (page) => set({ page }),
+    exploring: false,
+    exploreCard: null,
+    // Exploring belongs to the room page: leaving it ends the walk.
+    setPage: (page) => set(page === 'room' ? { page } : { page, exploring: false, exploreCard: null }),
     setMode: (mode) => set({ mode, selectedSlot: null }),
     selectShelf: (selectedShelfId) => set({ selectedShelfId }),
     selectSlot: (selectedSlot, slotLayer = 'belakang') =>
@@ -55,6 +72,9 @@ export const createUiStore = () =>
     focusBook: (highlightBookId, shelfId = null) => set({ highlightBookId, focusShelfId: shelfId }),
     focusShelf: (focusShelfId) => set({ focusShelfId }),
     setUnplacedFilter: (unplacedFilter) => set({ unplacedFilter }),
+    startExplore: () => set({ exploring: true, selectedShelfId: null, selectedSlot: null, focusShelfId: null, exploreCard: null }),
+    stopExplore: () => set({ exploring: false, exploreCard: null }),
+    setExploreCard: (exploreCard) => set({ exploreCard }),
   }));
 
 export const useUiStore = createUiStore();

@@ -17,5 +17,7 @@ export async function resetAll() {
     focusShelfId: null,
     unplacedFilter: '',
     slotLayer: 'depan',
+    exploring: false,
+    exploreCard: null,
   });
 }
