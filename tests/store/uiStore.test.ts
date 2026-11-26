@@ -33,3 +33,24 @@ test('a slot opens on its back layer unless a layer is named', () => {
   s.getState().setSlotLayer('depan');
   expect(s.getState().slotLayer).toBe('depan');
 });
+
+describe('exploring', () => {
+  test('entering clears what was selected; leaving clears the book card', () => {
+    const s = createUiStore();
+    s.getState().selectSlot({ shelfId: 'a', row: 0, col: 0 });
+    s.getState().focusShelf('a');
+    s.getState().startExplore();
+    expect(s.getState()).toMatchObject({ exploring: true, selectedShelfId: null, selectedSlot: null, focusShelfId: null });
+    s.getState().setExploreCard({ bookId: 'b', x: 1, y: 2, pinned: true });
+    s.getState().stopExplore();
+    expect(s.getState()).toMatchObject({ exploring: false, exploreCard: null });
+  });
+
+  test('going to the collection ends exploring', () => {
+    const s = createUiStore();
+    s.getState().startExplore();
+    s.getState().setExploreCard({ bookId: 'b', x: 1, y: 2, pinned: false });
+    s.getState().setPage('collection');
+    expect(s.getState()).toMatchObject({ exploring: false, exploreCard: null, page: 'collection' });
+  });
+});
