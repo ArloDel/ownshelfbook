@@ -1,4 +1,4 @@
-import { createBook, createSeriesBooks, seriesColor } from '../../src/domain/books';
+import { checkBookSize, createBook, createSeriesBooks, seriesColor } from '../../src/domain/books';
 
 test('createBook komik uses komik defaults', () => {
   const b = createBook({ title: 'Naruto', type: 'komik', series: 'Naruto', volume: 3 });
@@ -61,4 +61,25 @@ test('createBook rejects a thickness outside the allowed range', () => {
 test('createSeriesBooks gives every volume the custom thickness', () => {
   const books = createSeriesBooks({ series: 'One Piece', type: 'komik', from: 1, to: 3, thicknessCm: 1.8 });
   expect(books.map((b) => b.thicknessCm)).toEqual([1.8, 1.8, 1.8]);
+});
+
+test('createBook takes a custom height, rounded to 0.1 cm', () => {
+  expect(createBook({ title: 'Tinggi', type: 'komik', heightCm: 19.26 })).toMatchObject({ heightCm: 19.3, thicknessCm: 1.5 });
+});
+
+test('createBook rejects a height outside 5–60 cm', () => {
+  for (const h of [4.9, 61, NaN]) {
+    expect(() => createBook({ title: 'X', type: 'buku', heightCm: h })).toThrow('Tinggi harus antara 5 dan 60 cm');
+  }
+});
+
+test('createSeriesBooks gives every volume the custom height', () => {
+  const books = createSeriesBooks({ series: 'Berserk', type: 'komik', from: 1, to: 3, heightCm: 25.7 });
+  expect(books.map((b) => b.heightCm)).toEqual([25.7, 25.7, 25.7]);
+});
+
+test('checkBookSize accepts sizes in range and names the first one out of range', () => {
+  expect(() => checkBookSize({ thicknessCm: 2, heightCm: 20 })).not.toThrow();
+  expect(() => checkBookSize({ thicknessCm: 0, heightCm: 20 })).toThrow('Tebal harus antara 0,1 dan 30 cm');
+  expect(() => checkBookSize({ thicknessCm: 2, heightCm: 70 })).toThrow('Tinggi harus antara 5 dan 60 cm');
 });
