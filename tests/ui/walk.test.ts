@@ -96,3 +96,28 @@ test('keys typed into a text field do not walk; keys on a button do', () => {
   expect(isTypingTarget(document.createElement('button'))).toBe(false);
   expect(isTypingTarget(null)).toBe(false);
 });
+
+import { walkKey, walkStraight } from '../../src/ui/scene/walk';
+
+describe('review fixes', () => {
+  const kubus = createShelf('kubus', 'K');
+
+  test('a jump-free walk to a spot behind a shelf stops in front of it', () => {
+    const p = walkStraight({ x: 0, z: 80 }, { x: 0, z: -150 }, room, [kubus]);
+    expect(p.z).toBeGreaterThan(17.5 + 25 - 0.01);
+    expect(isBlocked(p, room, [kubus])).toBe(false);
+  });
+
+  test('someone standing inside a shelf can still walk out', () => {
+    const p = moveWithCollision({ x: 0, z: 0 }, 0, 10, room, [kubus]);
+    expect(p).toEqual({ x: 0, z: 10 });
+  });
+
+  test('walking keys with Ctrl, Cmd or Alt belong to the browser', () => {
+    expect(walkKey({ code: 'KeyW', ctrlKey: false, metaKey: false, altKey: false })).toBe('fwd');
+    expect(walkKey({ code: 'ArrowLeft', ctrlKey: false, metaKey: false, altKey: false })).toBe('left');
+    expect(walkKey({ code: 'KeyW', ctrlKey: true, metaKey: false, altKey: false })).toBeNull();
+    expect(walkKey({ code: 'KeyS', ctrlKey: false, metaKey: true, altKey: false })).toBeNull();
+    expect(walkKey({ code: 'KeyQ', ctrlKey: false, metaKey: false, altKey: false })).toBeNull();
+  });
+});
