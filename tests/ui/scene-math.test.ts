@@ -133,3 +133,18 @@ test('volume numbers shrink with their digits so they stay on a thin spine', () 
   expect(volumeFontSize(1.44, '12') * 2 * 0.6).toBeLessThanOrEqual(1.44 * 0.9);
   expect(volumeFontSize(10, '3')).toBe(2.2);
 });
+
+import { roomWalls } from '../../src/ui/scene/RoomMesh';
+
+describe('room walls', () => {
+  const room = { widthCm: 500, depthCm: 400, heightCm: 260 };
+  test('the orbit view keeps two walls open', () => {
+    expect(roomWalls(room, false).map((w) => w.key)).toEqual(['back', 'left']);
+  });
+  test('while exploring the room is closed all round, with a ceiling', () => {
+    const walls = roomWalls(room, true);
+    expect(walls.map((w) => w.key)).toEqual(['back', 'left', 'front', 'right', 'ceiling']);
+    expect(walls.find((w) => w.key === 'ceiling')!.position[1]).toBeGreaterThanOrEqual(260);
+    expect(walls.find((w) => w.key === 'front')!.position[2]).toBeGreaterThan(200);
+  });
+});
