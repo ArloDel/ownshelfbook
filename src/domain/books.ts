@@ -15,6 +15,22 @@ function bookThickness(type: BookType, t: number | undefined): number {
   return Math.round(t * 10) / 10;
 }
 
+export const HEIGHT_MIN_CM = 5;
+export const HEIGHT_MAX_CM = 60;
+
+/** Validate and round (0.1 cm) a user-given height; undefined → the type default. */
+function bookHeight(type: BookType, h: number | undefined): number {
+  if (h === undefined) return BOOK_DEFAULTS[type].heightCm;
+  if (!(h >= HEIGHT_MIN_CM && h <= HEIGHT_MAX_CM)) throw new Error('Tinggi harus antara 5 dan 60 cm');
+  return Math.round(h * 10) / 10;
+}
+
+/** For edits: throw the same messages as new books when a size is out of range. */
+export function checkBookSize(size: { thicknessCm: number; heightCm: number }): void {
+  bookThickness('buku', size.thicknessCm);
+  bookHeight('buku', size.heightCm);
+}
+
 /** Deterministic color from a string (same name → same color). */
 export function seriesColor(name: string): string {
   let h = 2166136261;
@@ -46,6 +62,8 @@ export interface NewBookInput {
   color?: string;
   /** Spine thickness in cm; omitted → default for the type. */
   thicknessCm?: number;
+  /** Height in cm; omitted → default for the type. */
+  heightCm?: number;
 }
 
 export function createBook(input: NewBookInput): Book {
@@ -53,6 +71,7 @@ export function createBook(input: NewBookInput): Book {
   if (!title) throw new Error('Judul wajib diisi');
   const series = input.series?.trim() || undefined;
   const thicknessCm = bookThickness(input.type, input.thicknessCm);
+  const heightCm = bookHeight(input.type, input.heightCm);
   return {
     id: crypto.randomUUID(),
     title,
@@ -64,6 +83,7 @@ export function createBook(input: NewBookInput): Book {
     color: input.color ?? seriesColor(series ?? title),
     ...BOOK_DEFAULTS[input.type],
     thicknessCm,
+    heightCm,
     placement: null,
     createdAt: Date.now(),
   };
@@ -79,6 +99,8 @@ export interface NewSeriesInput {
   author?: string;
   /** Spine thickness in cm for every volume; omitted → default for the type. */
   thicknessCm?: number;
+  /** Height in cm for every volume; omitted → default for the type. */
+  heightCm?: number;
 }
 
 export function createSeriesBooks(input: NewSeriesInput): Book[] {
@@ -89,13 +111,24 @@ export function createSeriesBooks(input: NewSeriesInput): Book[] {
     throw new Error('Nomor volume harus bilangan bulat positif');
   }
   bookThickness(input.type, input.thicknessCm);
+  bookHeight(input.type, input.heightCm);
   if (from > to) throw new Error('Volume awal tidak boleh lebih besar dari volume akhir');
   if (to - from + 1 > MAX_SERIES_BATCH) {
     throw new Error(`Maksimal ${MAX_SERIES_BATCH} volume sekali tambah`);
   }
   const books: Book[] = [];
   for (let v = from; v <= to; v++) {
-    books.push(createBook({ title: series, series, volume: v, type: input.type, author: input.author, thicknessCm: input.thicknessCm }));
+    books.push(
+      createBook({
+        title: series,
+        series,
+        volume: v,
+        type: input.type,
+        author: input.author,
+        thicknessCm: input.thicknessCm,
+        heightCm: input.heightCm,
+      }),
+    );
   }
   return books;
 }
