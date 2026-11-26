@@ -18,7 +18,8 @@ const HEAD_ROOM_CM = 20;
 const START_DISTANCE_CM = 150;
 const STOP_SHORT_CM = 30;
 const SEARCH_STEP_CM = 10;
-const SEARCH_DIRECTIONS = 16;
+/** Points tried on each search ring are about this far apart (cm). */
+const SEARCH_SPACING_CM = 10;
 
 export function eyeHeightCm(room: Room): number {
   return room.heightCm < EYE_CM + HEAD_ROOM_CM ? room.heightCm - HEAD_ROOM_CM : EYE_CM;
@@ -46,6 +47,8 @@ export function isBlocked(p: Floor, room: Room, shelves: Shelf[]): boolean {
 /** Move by (dx, dz); when that is blocked, slide along whichever single axis is still free. */
 export function moveWithCollision(from: Floor, dx: number, dz: number, room: Room, shelves: Shelf[]): Floor {
   const both = { x: from.x + dx, z: from.z + dz };
+  // Someone already inside a shelf (a crowded start) may always move, so they can walk out.
+  if (isBlocked(from, room, shelves)) return both;
   if (!isBlocked(both, room, shelves)) return both;
   const alongX = { x: from.x + dx, z: from.z };
   if (dx !== 0 && !isBlocked(alongX, room, shelves)) return alongX;
@@ -74,8 +77,9 @@ export function startPoint(room: Room, shelves: Shelf[]): Floor & { yaw: number 
   const reach = Math.max(room.widthCm, room.depthCm) / 2;
   if (!isBlocked(middle, room, shelves)) return { ...middle, yaw: nearest ? yawTowards(middle, nearest.position) : 0 };
   for (let r = SEARCH_STEP_CM; r <= reach; r += SEARCH_STEP_CM) {
-    for (let k = 0; k < SEARCH_DIRECTIONS; k++) {
-      const a = (k / SEARCH_DIRECTIONS) * Math.PI * 2;
+    const directions = Math.max(8, Math.ceil((2 * Math.PI * r) / SEARCH_SPACING_CM));
+    for (let k = 0; k < directions; k++) {
+      const a = (k / directions) * Math.PI * 2;
       const p = { x: Math.sin(a) * r, z: Math.cos(a) * r };
       if (!isBlocked(p, room, shelves)) return { ...p, yaw: nearest ? yawTowards(p, nearest.position) : 0 };
     }
@@ -107,4 +111,35 @@ export function isTypingTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const editable = el.isContentEditable || ['', 'true', 'plaintext-only'].includes(el.getAttribute('contenteditable') ?? 'no');
   return editable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
+/** Walk to a spot in one go (no animation), in 10 cm steps that stop where something is in the way. */
+export function walkStraight(from: Floor, target: Floor, room: Room, shelves: Shelf[]): Floor {
+  let pos = from;
+  for (let i = 0; i < 1000; i++) {
+    const step = stepToward(pos, target, SEARCH_SPACING_CM);
+    const next = moveWithCollision(pos, step.pos.x - pos.x, step.pos.z - pos.z, room, shelves);
+    if (Math.hypot(next.x - pos.x, next.z - pos.z) < 0.5) return next;
+    pos = next;
+    if (step.done) return pos;
+  }
+  return pos;
+}
+
+export type WalkDir = 'fwd' | 'back' | 'left' | 'right';
+const WALK_KEYS: Record<string, WalkDir> = {
+  KeyW: 'fwd',
+  ArrowUp: 'fwd',
+  KeyS: 'back',
+  ArrowDown: 'back',
+  KeyA: 'left',
+  ArrowLeft: 'left',
+  KeyD: 'right',
+  ArrowRight: 'right',
+};
+
+/** The walking direction for a key; with Ctrl, Cmd or Alt the key belongs to the browser. */
+export function walkKey(e: { code: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean }): WalkDir | null {
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  return WALK_KEYS[e.code] ?? null;
 }

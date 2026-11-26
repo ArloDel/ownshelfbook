@@ -11,19 +11,10 @@ import {
   startPoint,
   stepToward,
   WALK_SPEED_CM,
+  walkKey,
+  walkStraight,
   type Floor,
 } from './walk';
-
-const KEYS: Record<string, 'fwd' | 'back' | 'left' | 'right'> = {
-  KeyW: 'fwd',
-  ArrowUp: 'fwd',
-  KeyS: 'back',
-  ArrowDown: 'back',
-  KeyA: 'left',
-  ArrowLeft: 'left',
-  KeyD: 'right',
-  ArrowRight: 'right',
-};
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -45,6 +36,7 @@ export function ExploreControls({ walkTarget }: { walkTarget: MutableRefObject<F
   const view = useRef({ yaw: 0, pitch: 0 });
   const held = useRef(new Set<string>());
   const run = useRef(false);
+  const reduced = useRef(prefersReducedMotion());
 
   // Enter: remember the orbit camera, stand at the start point. Leave: put the orbit camera back.
   useEffect(() => {
@@ -68,7 +60,7 @@ export function ExploreControls({ walkTarget }: { walkTarget: MutableRefObject<F
     const down = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
       if (e.key === 'Shift') run.current = true;
-      const dir = KEYS[e.code];
+      const dir = walkKey(e);
       if (!dir) return;
       e.preventDefault();
       held.current.add(dir);
@@ -76,7 +68,7 @@ export function ExploreControls({ walkTarget }: { walkTarget: MutableRefObject<F
     };
     const up = (e: KeyboardEvent) => {
       if (e.key === 'Shift') run.current = false;
-      const dir = KEYS[e.code];
+      const dir = walkKey({ code: e.code, ctrlKey: false, metaKey: false, altKey: false });
       if (dir) held.current.delete(dir);
     };
     const blur = () => {
@@ -111,13 +103,15 @@ export function ExploreControls({ walkTarget }: { walkTarget: MutableRefObject<F
     window.addEventListener('pointermove', moveP);
     window.addEventListener('pointerup', upP);
     window.addEventListener('pointercancel', upP);
+    // OrbitControls set touch-action on this canvas; give it back exactly as it was.
+    const touchBefore = dom.style.touchAction;
     dom.style.touchAction = 'none';
     return () => {
       dom.removeEventListener('pointerdown', downP);
       window.removeEventListener('pointermove', moveP);
       window.removeEventListener('pointerup', upP);
       window.removeEventListener('pointercancel', upP);
-      dom.style.touchAction = '';
+      dom.style.touchAction = touchBefore;
     };
   }, [dom]);
 
@@ -137,9 +131,13 @@ export function ExploreControls({ walkTarget }: { walkTarget: MutableRefObject<F
       const dx = ((fx * f + Math.cos(yaw) * r) / len) * speed;
       const dz = ((fz * f - Math.sin(yaw) * r) / len) * speed;
       pos.current = moveWithCollision(pos.current, dx, dz, room, shelves);
+    } else if (walkTarget.current && reduced.current) {
+      // No animation: arrive at once, but still stopped by whatever is in the way.
+      pos.current = walkStraight(pos.current, walkTarget.current, room, shelves);
+      walkTarget.current = null;
     } else if (walkTarget.current) {
       const target = walkTarget.current;
-      const step = stepToward(pos.current, target, prefersReducedMotion() ? Infinity : speed);
+      const step = stepToward(pos.current, target, speed);
       const next = moveWithCollision(pos.current, step.pos.x - pos.current.x, step.pos.z - pos.current.z, room, shelves);
       const stuck = next.x === pos.current.x && next.z === pos.current.z;
       pos.current = next;

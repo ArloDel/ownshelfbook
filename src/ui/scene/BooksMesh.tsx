@@ -1,7 +1,7 @@
 import { Text } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useUiStore } from '../../store/uiStore';
-import { isClick } from './clicks';
+import { hitFirst, isClick } from './clicks';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Color, InstancedMesh, Matrix4, Object3D, SRGBColorSpace, TextureLoader, Vector3 } from 'three';
 import { seriesKey } from '../../domain/covers';
@@ -188,7 +188,8 @@ export function BooksMesh({
   const bookAt = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId === undefined ? undefined : placed[e.instanceId]?.book);
   const onMove = (e: ThreeEvent<PointerEvent>) => {
     const book = bookAt(e);
-    if (!book) return;
+    // A book behind a shelf board is not pointed at through it.
+    if (!book || !hitFirst(e)) return;
     e.stopPropagation();
     const ui = useUiStore.getState();
     if (ui.exploreCard?.pinned) return;
@@ -200,7 +201,7 @@ export function BooksMesh({
   };
   const onPick = (e: ThreeEvent<MouseEvent>) => {
     const book = bookAt(e);
-    if (!book) return;
+    if (!book || !hitFirst(e)) return;
     e.stopPropagation();
     if (!isClick(e)) return;
     useUiStore.getState().setExploreCard({ bookId: book.id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY, pinned: true });

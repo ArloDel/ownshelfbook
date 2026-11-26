@@ -132,6 +132,11 @@ export function Scene() {
       shadows="soft"
       camera={{ position: [room.widthCm / 200, 1.9, room.depthCm / 100], fov: 50, near: 0.05, far: 100 }}
       style={{ background: '#e9e2d6' }}
+      // A click on nothing interactive (a wall, the ceiling) lets go of a pinned book card.
+      onPointerMissed={() => {
+        const ui = useUiStore.getState();
+        if (ui.exploring && ui.exploreCard?.pinned) ui.setExploreCard(null);
+      }}
     >
       <SceneContent />
     </Canvas>

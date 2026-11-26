@@ -1,6 +1,6 @@
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Room } from '../../domain/types';
-import { isClick } from './clicks';
+import { hitFirst, isClick } from './clicks';
 
 const WALL = 4;
 const BASEBOARD = { height: 8, thickness: 1.5, color: '#f7f2ea' };
@@ -71,6 +71,8 @@ export function RoomMesh({
         receiveShadow
         onClick={(e: ThreeEvent<MouseEvent>) => {
           e.stopPropagation();
+          // A click on a shelf also reaches the floor behind it; only a click on the floor itself counts.
+          if (!hitFirst(e)) return;
           // World metres → room cm (the scene is drawn at 1 unit = 1 cm, scaled by 0.01).
           if (isClick(e)) onFloorClick?.({ x: e.point.x * 100, z: e.point.z * 100 });
         }}

@@ -534,6 +534,18 @@
     box-shadow: 0 -8px 0 var(--bg);
   }
   /* Exploring */
+  /* Exploring fills the screen, also on phones where the room is otherwise a scrolling column. */
+  .room.exploring {
+    position: fixed;
+    inset: 0;
+    height: auto;
+    overflow: hidden;
+  }
+  .room.exploring .canvas-wrap {
+    position: absolute;
+    inset: 0;
+    height: auto;
+  }
   .explore-exit {
     position: absolute;
     top: var(--space-6);
@@ -554,7 +566,9 @@
     background: rgba(28, 27, 25, 0.6);
     color: #fff;
     font-size: var(--text-xs);
-    white-space: nowrap;
+    width: max-content;
+    max-width: calc(100vw - 2 * var(--space-6));
+    text-align: center;
     pointer-events: none;
     animation: explore-hint-fade 0.6s ease-out 4s forwards;
   }
