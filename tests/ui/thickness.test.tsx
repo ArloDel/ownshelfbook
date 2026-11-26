@@ -60,3 +60,61 @@ test('an invalid thickness shows an error and saves nothing', async () => {
   expect(await within(form).findByRole('alert')).toHaveTextContent('Tebal harus antara 0,1 dan 30 cm');
   expect(useDataStore.getState().books).toHaveLength(0);
 });
+
+describe('height', () => {
+  test('single book: height follows the type until typed, and is saved', async () => {
+    const { user, form } = await openForm('Tambah buku');
+    const field = within(form).getByLabelText('Tinggi (cm)');
+    expect(field).toHaveValue('21');
+    await user.selectOptions(within(form).getByLabelText('Jenis'), 'komik');
+    expect(field).toHaveValue('18');
+    await user.type(within(form).getByLabelText('Judul'), 'Atlas');
+    await user.clear(field);
+    await user.type(field, '19,5');
+    await user.click(within(form).getByRole('button', { name: 'Simpan' }));
+    await waitFor(() => expect(useDataStore.getState().books).toHaveLength(1));
+    expect(useDataStore.getState().books[0].heightCm).toBe(19.5);
+  });
+
+  test('series: every volume gets the custom height', async () => {
+    const { user, form } = await openForm('Tambah berseri');
+    await user.type(within(form).getByLabelText('Nama seri'), 'Berserk');
+    await user.clear(within(form).getByLabelText('Sampai volume'));
+    await user.type(within(form).getByLabelText('Sampai volume'), '2');
+    const field = within(form).getByLabelText('Tinggi (cm)');
+    await user.clear(field);
+    await user.type(field, '25');
+    await user.click(within(form).getByRole('button', { name: 'Simpan' }));
+    await waitFor(() => expect(useDataStore.getState().books).toHaveLength(2));
+    expect(useDataStore.getState().books.map((b) => b.heightCm)).toEqual([25, 25]);
+  });
+
+  test('a height out of range shows an error and saves nothing', async () => {
+    const { user, form } = await openForm('Tambah buku');
+    await user.type(within(form).getByLabelText('Judul'), 'Mini');
+    const field = within(form).getByLabelText('Tinggi (cm)');
+    await user.clear(field);
+    await user.type(field, '3');
+    await user.click(within(form).getByRole('button', { name: 'Simpan' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Tinggi harus antara 5 dan 60 cm');
+    expect(useDataStore.getState().books).toHaveLength(0);
+  });
+
+  test('editing a book takes a height with a decimal comma and checks the range', async () => {
+    await useDataStore.getState().addBook({ title: 'Atlas', type: 'buku' });
+    const user = userEvent.setup();
+    render(<CollectionPage />);
+    await user.click(screen.getByRole('button', { name: 'Edit Atlas' }));
+    const form = screen.getByRole('form', { name: 'Edit buku' });
+    const field = within(form).getByLabelText('Tinggi (cm)');
+    expect(field).toHaveValue('21');
+    await user.clear(field);
+    await user.type(field, '70');
+    await user.click(within(form).getByRole('button', { name: 'Simpan' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Tinggi harus antara 5 dan 60 cm');
+    await user.clear(field);
+    await user.type(field, '20,5');
+    await user.click(within(form).getByRole('button', { name: 'Simpan' }));
+    await waitFor(() => expect(useDataStore.getState().books[0].heightCm).toBe(20.5));
+  });
+});
